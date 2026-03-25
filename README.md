@@ -1,4 +1,4 @@
-# 🛠️ Web Tools Studio
+# 🛠️ Web Tools Studio (local-studio)
 
 A collection of powerful, fast, and completely private web utilities that run **entirely in your browser**. No backend servers, no data uploads, and absolute privacy. 
 
@@ -9,7 +9,7 @@ Built with modern HTML, CSS, and Vanilla JavaScript, these tools leverage cuttin
 ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
 
 ## ✨ Live Demo
-*(Optional: If you host this on GitHub Pages, put your link here! e.g., [Try it out here](https://yourusername.github.io/web-tools-studio))*
+*(Optional: If you host this on GitHub Pages, put your link here! e.g., [Try it out here](https://shreyas445.github.io/local-studio/))*
 
 ---
 
@@ -63,4 +63,4 @@ Since these tools have **zero backend dependencies**, installation is instant.
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/yourusername/web-tools-studio.git](https://github.com/yourusername/web-tools-studio.git)
+   git clone [https://github.com/Shreyas445/local-studio.git](https://github.com/Shreyas445/local-studio.git)
