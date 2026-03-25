@@ -2,185 +2,243 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Local Studio | Web Tools</title>
     
     <link rel="icon" type="image/png" href="icon.png">
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
-            /* Premium Light App Theme */
-            --bg-main: #f4f7fb;
-            --bg-card: #ffffff;
-            --text-dark: #0f172a;
-            --text-gray: #64748b;
-            --border-light: #e2e8f0;
+            /* Apple-style System Colors */
+            --system-bg: #f2f2f7; /* iOS Grouped Background */
+            --card-bg: #ffffff;
+            --text-primary: #000000;
+            --text-secondary: #8e8e93;
+            --divider: rgba(60, 60, 67, 0.1);
             
-            /* App Category Colors */
-            --app-red: #ef4444;
-            --app-red-bg: #fef2f2;
-            --app-indigo: #6366f1;
-            --app-indigo-bg: #eef2ff;
-            --app-emerald: #10b981;
-            --app-emerald-bg: #ecfdf5;
-            --app-blue: #3b82f6;
-            --app-blue-bg: #eff6ff;
-            --app-purple: #a855f7;
-            --app-purple-bg: #faf5ff;
+            /* Vibrant App Gradients */
+            --grad-red: linear-gradient(135deg, #ff5e5e, #e0040b);
+            --grad-purple: linear-gradient(135deg, #d873ff, #8b20f5);
+            --grad-green: linear-gradient(135deg, #42e695, #00b359);
+            --grad-blue: linear-gradient(135deg, #5ac8fa, #007aff);
+
+            /* Squircles & Shadows */
+            --radius-card: 24px;
+            --radius-icon: 16px;
+            --shadow-subtle: 0 4px 14px rgba(0, 0, 0, 0.04);
             
-            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            --radius-card: 20px;
-            --radius-icon: 14px;
+            /* Spring Animation */
+            --spring: cubic-bezier(0.25, 1, 0.5, 1);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            /* Native Font Stack */
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+        }
         
         body { 
-            background-color: var(--bg-main); 
-            color: var(--text-dark); 
+            background-color: var(--system-bg); 
+            color: var(--text-primary); 
             min-height: 100vh; 
             display: flex; 
             flex-direction: column; 
             -webkit-font-smoothing: antialiased;
         }
 
-        /* Top Navigation */
+        .logo {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+        }
+
+        /* Translucent Navbar */
         .navbar { 
-            background: rgba(255, 255, 255, 0.8); 
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            padding: 1.25rem 2rem; 
+            background: rgba(255, 255, 255, 0.75); 
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 16px 24px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             position: sticky; 
             top: 0; 
             z-index: 100; 
-            border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+            border-bottom: 0.5px solid var(--divider);
         }
         .brand { 
-            font-size: 1.4rem; 
-            font-weight: 800; 
+            font-size: 20px; 
+            font-weight: 700; 
+            letter-spacing: -0.5px;
             display: flex; 
             align-items: center; 
-            gap: 0.75rem; 
-            letter-spacing: -0.03em; 
-            color: var(--text-dark);
+            gap: 8px; 
         }
-        .brand i { color: var(--app-indigo); font-size: 1.6rem; }
+        .brand i { color: #007aff; }
 
         /* Main Container */
         .container { 
-            max-width: 1100px; 
+            max-width: 1200px; 
             margin: 0 auto; 
-            padding: 3rem 1.5rem 5rem 1.5rem; 
-            flex-grow: 1; 
+            padding: 40px 24px 80px; 
             width: 100%; 
         }
 
-        /* Hero Section */
-        .hero { text-align: center; margin-bottom: 4rem; animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-        .hero h1 { font-size: 2.75rem; font-weight: 800; margin-bottom: 1rem; letter-spacing: -0.03em; }
-        .hero p { font-size: 1.1rem; color: var(--text-gray); max-width: 500px; margin: 0 auto; line-height: 1.6; }
-        .badge { display: inline-block; background: var(--text-dark); color: white; font-size: 0.75rem; font-weight: 700; padding: 0.3rem 0.8rem; border-radius: 20px; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
-
-        /* App Categories */
-        .category-title { font-size: 1.1rem; font-weight: 700; color: var(--text-gray); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; padding-left: 0.5rem; }
-        .category-section { margin-bottom: 3.5rem; animation: fadeIn 0.8s ease backwards; }
-        
-        /* Staggered Animation Delays */
-        .category-section:nth-child(2) { animation-delay: 0.1s; }
-        .category-section:nth-child(3) { animation-delay: 0.2s; }
-        .category-section:nth-child(4) { animation-delay: 0.3s; }
-
-        /* App Grid */
-        .app-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
+        /* Clean Hero Section */
+        .hero { 
+            text-align: center; 
+            margin-bottom: 48px; 
+            animation: fadeInDown 0.8s var(--spring); 
+        }
+        .hero h1 { 
+            font-size: 40px; 
+            font-weight: 800; 
+            letter-spacing: -1px; 
+            margin-bottom: 12px; 
+        }
+        .hero p { 
+            font-size: 17px; 
+            color: var(--text-secondary); 
+            max-width: 500px; 
+            margin: 0 auto; 
+            line-height: 1.4; 
+        }
+        .badge { 
+            display: inline-flex; 
+            align-items: center; 
+            background: #e5e5ea; 
+            color: #1c1c1e; 
+            font-size: 13px; 
+            font-weight: 600; 
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            margin-bottom: 16px; 
         }
 
-        /* App Card Design */
+        /* Category Grouping */
+        .category-section { 
+            margin-bottom: 40px; 
+            animation: fadeInUp 0.8s var(--spring) backwards; 
+        }
+        .category-section:nth-child(2) { animation-delay: 0.05s; }
+        .category-section:nth-child(3) { animation-delay: 0.1s; }
+        .category-section:nth-child(4) { animation-delay: 0.15s; }
+
+        .category-title { 
+            font-size: 22px; 
+            font-weight: 700; 
+            letter-spacing: -0.5px;
+            margin-bottom: 16px; 
+            padding-left: 8px;
+        }
+
+        /* Fluid App Grid */
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        /* The App Card (Squircle) */
         .app-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
+            background: var(--card-bg);
             border-radius: var(--radius-card);
-            padding: 1.5rem;
+            padding: 20px;
             text-decoration: none;
             color: inherit;
             display: flex;
-            align-items: flex-start;
-            gap: 1.25rem;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: var(--shadow-sm);
-            position: relative;
-            overflow: hidden;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow-subtle);
+            transition: transform 0.2s var(--spring), box-shadow 0.2s ease;
             cursor: pointer;
+            position: relative;
         }
 
-        /* Interaction States */
-        .app-card:hover {
-            transform: translateY(-4px) scale(1.01);
-            box-shadow: var(--shadow-hover);
-            border-color: transparent;
+        /* Tactile Hover & Active States */
+        @media (hover: hover) {
+            .app-card:hover {
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+                transform: translateY(-2px);
+            }
         }
         .app-card:active {
-            transform: scale(0.97);
-            box-shadow: var(--shadow-sm);
-            transition: all 0.1s ease;
+            transform: scale(0.96);
+            box-shadow: var(--shadow-subtle);
         }
 
-        /* App Icon Wrapper */
+        /* App Icon */
         .app-icon {
-            width: 60px; 
-            height: 60px; 
+            width: 64px; 
+            height: 64px; 
             border-radius: var(--radius-icon);
             display: flex; 
             align-items: center; 
             justify-content: center;
-            font-size: 1.75rem; 
+            color: white;
+            font-size: 28px; 
             flex-shrink: 0;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2), 0 4px 10px rgba(0,0,0,0.1);
         }
-        .app-card:hover .app-icon { transform: scale(1.1) rotate(4deg); }
 
-        /* Text Content */
-        .app-info { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; height: 100%; }
-        .app-info h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.25rem; color: var(--text-dark); }
-        .app-info p { font-size: 0.9rem; color: var(--text-gray); line-height: 1.4; margin-bottom: 0; }
+        /* App Text */
+        .app-info { 
+            flex-grow: 1; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        .app-info h3 { 
+            font-size: 17px; 
+            font-weight: 600; 
+            margin-bottom: 4px; 
+            letter-spacing: -0.3px;
+        }
+        .app-info p { 
+            font-size: 14px; 
+            color: var(--text-secondary); 
+            line-height: 1.3; 
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
 
-        /* Color Themes for specific apps */
-        .theme-pdf .app-icon { background: var(--app-red-bg); color: var(--app-red); }
-        .theme-ai .app-icon { background: var(--app-purple-bg); color: var(--app-purple); }
-        .theme-img .app-icon { background: var(--app-emerald-bg); color: var(--app-emerald); }
-        .theme-qr .app-icon { background: var(--app-blue-bg); color: var(--app-blue); }
-
-        .theme-pdf:hover { box-shadow: 0 15px 25px -5px rgba(239, 68, 68, 0.15); border-color: #fca5a5; }
-        .theme-ai:hover { box-shadow: 0 15px 25px -5px rgba(168, 85, 247, 0.15); border-color: #d8b4fe; }
-        .theme-img:hover { box-shadow: 0 15px 25px -5px rgba(16, 185, 129, 0.15); border-color: #6ee7b7; }
-        .theme-qr:hover { box-shadow: 0 15px 25px -5px rgba(59, 130, 246, 0.15); border-color: #93c5fd; }
+        /* Themed Gradients */
+        .theme-pdf .app-icon { background: var(--grad-red); }
+        .theme-ai .app-icon { background: var(--grad-purple); }
+        .theme-img .app-icon { background: var(--grad-green); }
+        .theme-qr .app-icon { background: var(--grad-blue); }
 
         /* Go Arrow */
-        .go-arrow { position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%) translateX(10px); opacity: 0; color: var(--text-gray); transition: all 0.3s ease; font-size: 1.2rem; }
-        .app-card:hover .go-arrow { opacity: 1; transform: translateY(-50%) translateX(0); }
-        .app-card:hover .app-info { transform: translateX(-5px); transition: transform 0.3s ease; }
+        .go-arrow { 
+            color: #c7c7cc; /* iOS light gray arrow */
+            font-size: 18px; 
+            transition: color 0.2s ease;
+        }
+        .app-card:hover .go-arrow { color: var(--text-secondary); }
 
         /* Animations */
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInDown { 
+            from { opacity: 0; transform: translateY(-20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        @keyframes fadeInUp { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
 
-        /* Mobile Responsiveness */
+        /* Mobile Adjustments */
         @media (max-width: 600px) {
-            .hero h1 { font-size: 2.2rem; }
-            .container { padding: 2rem 1.25rem 4rem 1.25rem; }
-            .app-grid { grid-template-columns: 1fr; gap: 1rem; }
-            .app-card { padding: 1.25rem; }
-            .app-icon { width: 54px; height: 54px; font-size: 1.5rem; }
-            .go-arrow { display: none; /* Hide arrow on mobile to prevent text collision */ }
-            .app-card:hover .app-info { transform: none; }
+            .container { padding: 32px 16px 60px; }
+            .hero h1 { font-size: 32px; }
+            .app-grid { gap: 16px; }
+            .app-card { padding: 16px; border-radius: 20px; }
+            .app-icon { width: 56px; height: 56px; border-radius: 14px; font-size: 24px; }
+            .category-title { font-size: 20px; }
         }
     </style>
 </head>
@@ -188,20 +246,20 @@
 
     <nav class="navbar">
         <div class="brand">
-            <i class="fa-solid fa-layer-group"></i> Local Studio
+            <img src="icon.png" alt="Ub Studio" class="logo"> UB Studio
         </div>
     </nav>
 
     <div class="container">
         
         <div class="hero">
-            <span class="badge"><i class="fa-solid fa-lock" style="margin-right: 4px;"></i> 100% Offline & Private</span>
-            <h1>Your Browser Toolkit</h1>
+            <span class="badge"><i class="fa-solid fa-lock" style="margin-right: 6px;"></i> 100% Private</span>
+            <h1>UB Studio Toolkit</h1>
             <p>Fast, powerful utilities that run entirely on your device. No servers, no waiting, no data tracking.</p>
         </div>
 
         <div class="category-section">
-            <div class="category-title"><i class="fa-solid fa-file-pdf"></i> Document Tools</div>
+            <h2 class="category-title">Document Tools</h2>
             <div class="app-grid">
                 
                 <a href="pdfreader.html" class="app-card theme-pdf">
@@ -235,7 +293,7 @@
         </div>
 
         <div class="category-section">
-            <div class="category-title"><i class="fa-solid fa-microchip"></i> Image & AI Studio</div>
+            <h2 class="category-title">Image & AI Studio</h2>
             <div class="app-grid">
                 
                 <a href="bgremover.html" class="app-card theme-ai">
@@ -251,7 +309,7 @@
                     <div class="app-icon"><i class="fa-solid fa-file-signature"></i></div>
                     <div class="app-info">
                         <h3>Text Extractor</h3>
-                        <p>Draw a box over any image to instantly grab and copy the text (OCR).</p>
+                        <p>Draw a box over any image to instantly grab and copy the text.</p>
                     </div>
                     <i class="fa-solid fa-chevron-right go-arrow"></i>
                 </a>
@@ -269,7 +327,7 @@
         </div>
 
         <div class="category-section">
-            <div class="category-title"><i class="fa-solid fa-qrcode"></i> Connectivity</div>
+            <h2 class="category-title">Connectivity</h2>
             <div class="app-grid">
                 
                 <a href="QRgenerator.html" class="app-card theme-qr">
