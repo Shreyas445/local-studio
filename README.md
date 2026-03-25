@@ -9,7 +9,7 @@ Built with modern HTML, CSS, and Vanilla JavaScript, these tools leverage cuttin
 ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
 
 ## ✨ Live Demo
-click here to access live ---> *https://shreyas445.github.io/local-studio/*
+### click here to access live page ---> *https://shreyas445.github.io/local-studio/*
 
 ---
 
