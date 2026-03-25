@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to Image Extractor Studio</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --bg-panel: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --danger: #ef4444;
+            --border: #e2e8f0;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+            --shadow-md: 0 8px 16px -4px rgba(0,0,0,0.1);
+            --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+        
+        /* Stop horizontal scrolling on mobile */
+        body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+        /* Navbar */
+        .navbar { background: var(--bg-panel); padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-sm); }
+        .brand { font-size: 1.25rem; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+        @media (max-width: 600px) { .brand span { display: none; } }
+        
+        .nav-actions { display: flex; gap: 0.75rem; }
+        .back-btn, .new-btn { display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border); transition: all 0.2s; font-size: 0.9rem; cursor: pointer; }
+        .back-btn { color: var(--text-main); background: transparent; }
+        .back-btn:hover { background: #f1f5f9; }
+        .new-btn { color: var(--primary); background: #eef2ff; border-color: #c7d2fe; }
+        .new-btn:hover { background: #e0e7ff; }
+
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
+        @media (max-width: 768px) { .container { margin: 1rem auto; padding: 0 1rem; } }
+
+        /* Upload Zone */
+        #drop-zone {
+            background: var(--bg-panel); border: 2px dashed #94a3b8; border-radius: var(--radius-lg);
+            padding: 4rem 2rem; text-align: center; cursor: pointer; transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm); display: flex; flex-direction: column; align-items: center; justify-content: center;
+            flex-grow: 1; min-height: 50vh;
+        }
+        #drop-zone:hover, #drop-zone.dragover { border-color: var(--primary); background: #eef2ff; }
+        #drop-zone i { font-size: 4rem; color: #94a3b8; margin-bottom: 1rem; transition: color 0.3s; }
+        #drop-zone:hover i, #drop-zone.dragover i { color: var(--primary); }
+        #file-input { display: none; }
+
+        /* Workspace Grid */
+        #workspace { display: none; grid-template-columns: 1fr; gap: 1.5rem; animation: fadeIn 0.4s ease-out; }
+        
+        /* Sidebar Controls */
+        .controls-panel { background: var(--bg-panel); padding: 1.5rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 1.5rem; }
+        
+        .form-group { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
+        .form-group label { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        /* FIXED: Custom dropdown to prevent mobile overflow bounds */
+        .form-select { 
+            width: 100%; max-width: 100%; padding: 0.85rem; padding-right: 2.5rem; border: 1px solid var(--border); 
+            border-radius: 8px; font-size: 0.95rem; background: #f8fafc; color: var(--text-main); font-weight: 600; 
+            cursor: pointer; outline: none; transition: all 0.2s;
+            appearance: none; -webkit-appearance: none; -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat; background-position: right 1rem top 50%; background-size: 0.65rem auto;
+            text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+        }
+        .form-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); background: #fff; }
+
+        .stat-box { background: #f1f5f9; padding: 1rem; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
+        .stat-num { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+        .stat-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+
+        .btn { width: 100%; padding: 0.85rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; display: inline-flex; justify-content: center; align-items: center; gap: 0.5rem; font-size: 1rem; }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25); }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); }
+        .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; transform: none; }
+        
+        .btn-secondary { background: #ffffff; color: var(--text-main); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: #f1f5f9; }
+
+        /* Preview Grid */
+        .preview-area { background: var(--bg-panel); padding: 1.5rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); min-height: 300px; width: 100%; overflow: hidden; }
+        .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 1rem; }
+        .preview-header h3 { font-size: 1.15rem; color: var(--text-main); }
+        
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1.5rem; }
+
+        /* Page Card */
+        .page-card { position: relative; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm); border: 2px solid var(--border); transition: all 0.2s; cursor: pointer; background: #e2e8f0; aspect-ratio: 1 / 1.4; display: flex; align-items: center; justify-content: center; }
+        .page-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: #cbd5e1; }
+        .page-card.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary), var(--shadow-md); }
+        
+        .page-img { max-width: 100%; max-height: 100%; object-fit: contain; background: white; }
+        
+        .page-label { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(15, 23, 42, 0.75); color: white; padding: 0.4rem; text-align: center; font-size: 0.85rem; font-weight: 600; backdrop-filter: blur(4px); }
+        
+        .check-circle { position: absolute; top: 0.5rem; right: 0.5rem; width: 24px; height: 24px; background: white; border: 2px solid #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: transparent; transition: all 0.2s; z-index: 10; }
+        .page-card.selected .check-circle { background: var(--primary); border-color: var(--primary); color: white; }
+
+        /* Overlays & Modals */
+        .overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+        
+        /* Modal Box */
+        .modal { background: var(--bg-panel); width: 100%; max-width: 450px; padding: 2rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); text-align: center; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal i { font-size: 3rem; color: var(--primary); margin-bottom: 1rem; }
+        .modal h3 { font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--text-main); }
+        .modal p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.5; }
+        .modal-actions { display: flex; gap: 1rem; flex-direction: column; }
+        @media (min-width: 480px) { .modal-actions { flex-direction: row; } }
+
+        /* Loader */
+        .loader-content { text-align: center; background: white; padding: 2.5rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); width: 100%; max-width: 400px; }
+        .spinner { border: 4px solid #e2e8f0; border-top: 4px solid var(--primary); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 1.5rem; }
+        .progress-bar-bg { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 1rem 0; }
+        #progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.2s; }
+        #loading-text { font-weight: 700; font-size: 1.1rem; color: var(--text-main); }
+
+        /* Desktop specific layout */
+        @media (min-width: 900px) { 
+            #workspace { grid-template-columns: 320px 1fr; align-items: start; } 
+            .controls-panel { position: sticky; top: 6rem; }
+        }
+
+        /* Mobile specific layout tweaks */
+        @media (max-width: 600px) {
+            .grid-container { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem; }
+            .preview-area { padding: 1rem; }
+            .controls-panel { padding: 1.25rem; }
+            .modal { padding: 1.5rem; }
+            .modal i { font-size: 2.5rem; }
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="brand"><i class="fa-regular fa-file-image"></i> <span>PDF to Image Studio</span></div>
+        <div class="nav-actions">
+            <button onclick="window.history.back()" class="back-btn"><i class="fa-solid fa-arrow-left"></i> <span class="hide-mobile">Back</span></button>
+            <button onclick="resetWorkspace()" class="new-btn" id="btn-new" style="display:none;"><i class="fa-solid fa-plus"></i> <span class="hide-mobile">New PDF</span></button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="drop-zone">
+            <i class="fa-solid fa-file-pdf"></i>
+            <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--text-main);">Upload a PDF</h3>
+            <p style="color: var(--text-muted); font-size: 1rem; padding: 0 1rem;">Drag & drop a PDF file, or click to browse</p>
+            <input type="file" id="file-input" accept="application/pdf">
+        </div>
+
+        <div id="workspace">
+            
+            <div class="controls-panel">
+                <div class="stat-box">
+                    <div class="stat-num" id="stat-selected">0</div>
+                    <div class="stat-label">Pages Selected</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Output Quality</label>
+                    <select id="select-scale" class="form-select">
+                        <option value="1.5">Standard (Good)</option>
+                        <option value="2.5" selected>High Res (Best for Print)</option>
+                        <option value="3.5">Ultra Res (Large File)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Image Format</label>
+                    <select id="select-format" class="form-select">
+                        <option value="image/jpeg" selected>JPG (Smaller file size)</option>
+                        <option value="image/png">PNG (Lossless quality)</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                    <button class="btn btn-secondary" onclick="toggleSelectAll(true)" style="padding: 0.6rem; font-size: 0.85rem;">Select All</button>
+                    <button class="btn btn-secondary" onclick="toggleSelectAll(false)" style="padding: 0.6rem; font-size: 0.85rem;">Select None</button>
+                </div>
+
+                <button class="btn btn-primary" id="btn-download" onclick="handleDownloadClick()" disabled style="margin-top: 1rem;">
+                    <i class="fa-solid fa-download"></i> Extract Images
+                </button>
+            </div>
+
+            <div class="preview-area">
+                <div class="preview-header">
+                    <h3><i class="fa-solid fa-border-all" style="color: var(--primary);"></i> Select Pages to Extract</h3>
+                    <span id="page-count" style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);">Total: 0</span>
+                </div>
+                
+                <div class="grid-container" id="pages-grid">
+                    </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="overlay" id="download-modal">
+        <div class="modal">
+            <i class="fa-solid fa-download"></i>
+            <h3>Download Multiple Images</h3>
+            <p>You have selected <strong id="modal-count">X</strong> pages. Downloading them separately might trigger your browser's popup blocker. How would you like to save them?</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="executeDownload('separate')"><i class="fa-regular fa-images"></i> Separate Files</button>
+                <button class="btn btn-primary" onclick="executeDownload('zip')"><i class="fa-solid fa-file-zipper" style="color: #ffffff;"></i> Single ZIP File</button>
+            </div>
+            <button class="btn btn-secondary" onclick="closeModal()" style="margin-top: 1rem; width: 100%; border: none; background: transparent; color: var(--text-muted);">Cancel</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="loading-overlay">
+        <div class="loader-content">
+            <div class="spinner"></div>
+            <div id="loading-text">Processing PDF...</div>
+            <div class="progress-bar-bg"><div id="progress-bar"></div></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Elements ---
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const workspace = document.getElementById('workspace');
+        const btnNew = document.getElementById('btn-new');
+        
+        const grid = document.getElementById('pages-grid');
+        const statSelected = document.getElementById('stat-selected');
+        const statTotal = document.getElementById('page-count');
+        const btnDownload = document.getElementById('btn-download');
+        
+        const selectScale = document.getElementById('select-scale');
+        const selectFormat = document.getElementById('select-format');
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const progressBar = document.getElementById('progress-bar');
+        
+        const downloadModal = document.getElementById('download-modal');
+        const modalCount = document.getElementById('modal-count');
+
+        // --- State ---
+        let currentPdfDocument = null;
+        let pdfFileName = "Document";
+        let selectedPages = new Set(); // Stores page numbers (1-indexed)
+
+        // --- Event Listeners ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => { if(e.target.files[0]) handleFile(e.target.files[0]); });
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+        function resetWorkspace() {
+            currentPdfDocument = null;
+            selectedPages.clear();
+            grid.innerHTML = '';
+            fileInput.value = '';
+            
+            dropZone.style.display = 'flex';
+            workspace.style.display = 'none';
+            btnNew.style.display = 'none';
+            updateUI();
+        }
+
+        // --- Core PDF Processing ---
+        async function handleFile(file) {
+            if (!file || file.type !== 'application/pdf') return alert('Please upload a valid PDF file.');
+            
+            pdfFileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+            
+            dropZone.style.display = 'none';
+            loadingOverlay.style.display = 'flex';
+            loadingText.textContent = "Parsing Document...";
+            progressBar.style.width = "10%";
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                
+                currentPdfDocument = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const numPages = currentPdfDocument.numPages;
+                
+                statTotal.textContent = `Total: ${numPages}`;
+                workspace.style.display = 'grid';
+                btnNew.style.display = 'inline-flex';
+
+                await generateThumbnails(numPages);
+
+            } catch (error) {
+                console.error(error);
+                alert("Failed to read PDF. It might be corrupted or password protected.");
+                resetWorkspace();
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        async function generateThumbnails(numPages) {
+            const thumbScale = 0.5; 
+            
+            for (let i = 1; i <= numPages; i++) {
+                loadingText.textContent = `Loading Page ${i} of ${numPages}`;
+                progressBar.style.width = `${(i / numPages) * 100}%`;
+
+                const page = await currentPdfDocument.getPage(i);
+                const viewport = page.getViewport({ scale: thumbScale });
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                createPageCard(i, dataUrl);
+                
+                selectedPages.add(i);
+            }
+            updateUI();
+        }
+
+        // --- UI Interactions ---
+        function createPageCard(pageNum, imgSrc) {
+            const card = document.createElement('div');
+            card.className = 'page-card selected';
+            card.dataset.page = pageNum;
+            
+            card.innerHTML = `
+                <div class="check-circle"><i class="fa-solid fa-check"></i></div>
+                <img src="${imgSrc}" class="page-img">
+                <div class="page-label">Page ${pageNum}</div>
+            `;
+            
+            card.addEventListener('click', () => togglePageSelection(card, pageNum));
+            grid.appendChild(card);
+        }
+
+        function togglePageSelection(card, pageNum) {
+            if (selectedPages.has(pageNum)) {
+                selectedPages.delete(pageNum);
+                card.classList.remove('selected');
+            } else {
+                selectedPages.add(pageNum);
+                card.classList.add('selected');
+            }
+            updateUI();
+        }
+
+        function toggleSelectAll(selectAll) {
+            const cards = grid.querySelectorAll('.page-card');
+            cards.forEach(card => {
+                const pageNum = parseInt(card.dataset.page);
+                if (selectAll) {
+                    selectedPages.add(pageNum);
+                    card.classList.add('selected');
+                } else {
+                    selectedPages.delete(pageNum);
+                    card.classList.remove('selected');
+                }
+            });
+            updateUI();
+        }
+
+        function updateUI() {
+            const count = selectedPages.size;
+            statSelected.textContent = count;
+            btnDownload.disabled = count === 0;
+            btnDownload.innerHTML = `<i class="fa-solid fa-download"></i> Extract ${count} Image${count !== 1 ? 's' : ''}`;
+        }
+
+        // --- Export & Download Logic ---
+        function handleDownloadClick() {
+            if (selectedPages.size > 1) {
+                modalCount.textContent = selectedPages.size;
+                downloadModal.style.display = 'flex';
+            } else {
+                executeDownload('separate');
+            }
+        }
+
+        function closeModal() {
+            downloadModal.style.display = 'none';
+        }
+
+        async function renderPageToBlob(pageNum, scale, format) {
+            const page = await currentPdfDocument.getPage(pageNum);
+            const viewport = page.getViewport({ scale: scale });
+            
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            
+            if (format === 'image/jpeg') {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => resolve(blob), format, 0.9);
+            });
+        }
+
+        async function executeDownload(method) {
+            closeModal();
+            loadingOverlay.style.display = 'flex';
+            
+            const scale = parseFloat(selectScale.value);
+            const format = selectFormat.value;
+            const ext = format === 'image/jpeg' ? 'jpg' : 'png';
+            
+            const pagesToProcess = Array.from(selectedPages).sort((a, b) => a - b);
+            const total = pagesToProcess.length;
+
+            try {
+                if (method === 'zip') {
+                    loadingText.textContent = "Compiling ZIP File...";
+                    const zip = new JSZip();
+                    const imgFolder = zip.folder(`${pdfFileName}_images`);
+
+                    for (let i = 0; i < total; i++) {
+                        const pageNum = pagesToProcess[i];
+                        progressBar.style.width = `${(i / total) * 100}%`;
+                        
+                        const blob = await renderPageToBlob(pageNum, scale, format);
+                        
+                        const paddedNum = pageNum.toString().padStart(Math.max(2, String(currentPdfDocument.numPages).length), '0');
+                        imgFolder.file(`Page_${paddedNum}.${ext}`, blob);
+                    }
+
+                    loadingText.textContent = "Zipping files...";
+                    const zipBlob = await zip.generateAsync({ type: "blob" });
+                    
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(zipBlob);
+                    a.download = `${pdfFileName}_Images.zip`;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+
+                } else {
+                    for (let i = 0; i < total; i++) {
+                        const pageNum = pagesToProcess[i];
+                        loadingText.textContent = `Saving Page ${pageNum}...`;
+                        progressBar.style.width = `${((i + 1) / total) * 100}%`;
+                        
+                        const blob = await renderPageToBlob(pageNum, scale, format);
+                        const paddedNum = pageNum.toString().padStart(Math.max(2, String(currentPdfDocument.numPages).length), '0');
+                        
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = `${pdfFileName}_Page_${paddedNum}.${ext}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        
+                        await new Promise(r => setTimeout(r, 300));
+                        URL.revokeObjectURL(a.href);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert("An error occurred while generating the images.");
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

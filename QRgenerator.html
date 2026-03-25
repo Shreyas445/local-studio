@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Studio Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+    <style>
+        :root {
+            --bg-body: #f4f7fa;
+            --bg-panel: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --border: #e2e8f0;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.04);
+            --shadow-md: 0 8px 16px -4px rgba(0,0,0,0.08);
+            --radius-md: 10px;
+            --radius-lg: 16px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; padding-bottom: 4rem; }
+
+        /* Navbar */
+        .navbar {
+            background: var(--bg-panel); padding: 1rem 2rem; box-shadow: var(--shadow-sm);
+            display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; width: 100%;
+        }
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-main);
+            text-decoration: none; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px;
+            transition: all 0.2s; border: 1px solid var(--border);
+        }
+        .back-btn:hover { background: #f8fafc; color: var(--primary); border-color: #cbd5e1; }
+        .brand { font-size: 1.35rem; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+
+        /* Layout */
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; }
+        .app-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; align-items: start; }
+        @media (min-width: 950px) { .app-grid { grid-template-columns: 1.4fr 1fr; } }
+
+        /* Panels */
+        .panel { background: var(--bg-panel); padding: 2rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); margin-bottom: 2rem; }
+        .section-header { font-size: 1.15rem; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-main); border-bottom: 2px solid #f1f5f9; padding-bottom: 0.75rem; }
+        .section-header i { color: var(--primary); }
+
+        /* Forms */
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-muted); }
+        .form-control { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 0.95rem; transition: all 0.2s; background: #f8fafc; color: var(--text-main); }
+        .form-control:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); }
+        
+        /* Segmented Toggles (Tabs & Colors) */
+        .segmented-control { display: flex; background: #f1f5f9; padding: 0.35rem; border-radius: var(--radius-md); margin-bottom: 1rem; overflow-x: auto; scrollbar-width: none; }
+        .segment-btn { flex: 1; padding: 0.6rem 1rem; text-align: center; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-radius: 8px; transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .segment-btn:hover { color: var(--text-main); }
+        .segment-btn.active { background: #fff; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        .input-view { display: none; animation: fadeIn 0.3s; }
+        .input-view.active { display: block; }
+
+        /* Color & Slider Controls */
+        .color-wrap { display: flex; align-items: center; gap: 0.5rem; }
+        .color-wrap input[type="color"] { width: 45px; height: 45px; padding: 2px; border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; background: #fff; }
+        .slider-wrap { display: flex; align-items: center; gap: 1rem; }
+        .slider-wrap input[type="range"] { flex: 1; accent-color: var(--primary); }
+        .slider-val { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); min-width: 40px; text-align: right; }
+
+        /* Logo Picker Grid */
+        .logo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+        .logo-preset { aspect-ratio: 1; border: 2px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; cursor: pointer; transition: all 0.2s; background: #f8fafc; color: var(--text-muted); }
+        .logo-preset:hover { transform: translateY(-2px); border-color: #a5b4fc; color: var(--primary); }
+        .logo-preset.active { border-color: var(--primary); background: #eef2ff; color: var(--primary); }
+
+        /* Sticky Preview Panel */
+        .preview-wrapper { position: sticky; top: 6rem; }
+        .preview-panel { background: var(--bg-panel); padding: 2rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); text-align: center; display: flex; flex-direction: column; align-items: center; }
+        
+        #qr-canvas { background: #f8fafc; border-radius: 16px; padding: 1rem; border: 2px dashed var(--border); width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; transition: opacity 0.3s; position: relative; }
+        #qr-canvas.updating { opacity: 0.4; }
+        .live-indicator { position: absolute; top: -10px; right: -10px; background: var(--success); color: white; font-size: 0.7rem; padding: 0.3rem 0.8rem; border-radius: 20px; font-weight: bold; box-shadow: 0 2px 5px rgba(16,185,129,0.3); animation: pulse 2s infinite; letter-spacing: 0.5px;}
+
+        /* Buttons */
+        .btn-group { display: flex; gap: 1rem; width: 100%; margin-bottom: 1.5rem; }
+        .btn { flex: 1; padding: 0.85rem; border-radius: var(--radius-md); font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; display: flex; justify-content: center; align-items: center; gap: 0.5rem; font-size: 0.95rem; }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25); }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        
+        /* Copy Button State Handling */
+        .btn-secondary { background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .btn-secondary .icon-check, .btn-secondary .text-copied { display: none; }
+        .btn-secondary.copied { background: var(--success); color: white; border-color: var(--success); }
+        .btn-secondary.copied .icon-copy, .btn-secondary.copied .text-copy { display: none; }
+        .btn-secondary.copied .icon-check, .btn-secondary.copied .text-copied { display: inline; }
+
+        .payload-box { width: 100%; background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border); text-align: left; }
+        .payload-box label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 0.5rem; }
+        .payload-content { font-family: monospace; font-size: 0.85rem; color: var(--text-main); word-break: break-all; }
+        .payload-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .payload-link:hover { text-decoration: underline; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="javascript:void(0)" onclick="goBack()" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Back</a>
+        <div class="brand"><i class="fa-solid fa-qrcode"></i> QR Studio Pro</div>
+        <div style="width: 80px;"></div>
+    </nav>
+
+    <div class="container">
+        <div class="app-grid">
+            
+            <div class="controls-wrapper">
+                
+                <div class="panel">
+                    <div class="section-header"><i class="fa-solid fa-database"></i> 1. Payload Data</div>
+                    
+                    <div class="segmented-control" id="content-tabs">
+                        <div class="segment-btn active" data-target="view-link"><i class="fa-solid fa-link"></i> Link</div>
+                        <div class="segment-btn" data-target="view-text"><i class="fa-solid fa-align-left"></i> Text</div>
+                        <div class="segment-btn" data-target="view-location"><i class="fa-solid fa-map-location-dot"></i> Map</div>
+                        <div class="segment-btn" data-target="view-wifi"><i class="fa-solid fa-wifi"></i> WiFi</div>
+                        <div class="segment-btn" data-target="view-email"><i class="fa-solid fa-envelope"></i> Email</div>
+                    </div>
+
+                    <div id="view-link" class="input-view active">
+                        <div class="form-group">
+                            <label>URL / Website</label>
+                            <input type="url" id="input-url" class="form-control" placeholder="https://example.com" value="https://example.com">
+                        </div>
+                    </div>
+
+                    <div id="view-text" class="input-view">
+                        <div class="form-group">
+                            <label>Your Text</label>
+                            <textarea id="input-text" class="form-control" rows="3" placeholder="Enter any text here..."></textarea>
+                        </div>
+                    </div>
+
+                    <div id="view-location" class="input-view">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Latitude</label>
+                                <input type="number" id="input-lat" class="form-control" placeholder="40.7128" step="any">
+                            </div>
+                            <div class="form-group">
+                                <label>Longitude</label>
+                                <input type="number" id="input-lng" class="form-control" placeholder="-74.0060" step="any">
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" onclick="getLocation()" style="width: 100%;"><i class="fa-solid fa-location-crosshairs icon-copy"></i> Get Current Location</button>
+                    </div>
+
+                    <div id="view-wifi" class="input-view">
+                        <div class="form-group">
+                            <label>Network Name (SSID)</label>
+                            <input type="text" id="input-ssid" class="form-control" placeholder="My Home Network">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input type="text" id="input-wifipass" class="form-control" placeholder="Password">
+                            </div>
+                            <div class="form-group">
+                                <label>Security Type</label>
+                                <select id="input-wifitype" class="form-control">
+                                    <option value="WPA">WPA/WPA2</option>
+                                    <option value="WEP">WEP</option>
+                                    <option value="nopass">None</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="view-email" class="input-view">
+                        <div class="form-group">
+                            <label>Email Address</label>
+                            <input type="email" id="input-email" class="form-control" placeholder="hello@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <input type="text" id="input-subject" class="form-control" placeholder="Inquiry">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="section-header"><i class="fa-solid fa-fill-drip"></i> 2. Colors & Gradients</div>
+                    
+                    <label style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; display: block;">Foreground (Dots & Corners)</label>
+                    <div class="segmented-control">
+                        <div class="segment-btn active" onclick="toggleColorMode('fg', 'solid')">Solid Color</div>
+                        <div class="segment-btn" onclick="toggleColorMode('fg', 'grad')">Gradient</div>
+                    </div>
+
+                    <div id="fg-solid-wrap">
+                        <div class="form-group">
+                            <div class="color-wrap">
+                                <input type="color" id="fg-color1" value="#0f172a">
+                                <input type="text" id="hex-fg1" class="form-control" value="#0f172a">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="fg-grad-wrap" style="display: none; padding: 1rem; background: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border); margin-bottom: 1.25rem;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Color 1</label>
+                                <div class="color-wrap"><input type="color" id="fg-color-g1" value="#4f46e5"><input type="text" id="hex-fgg1" class="form-control" value="#4f46e5"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Color 2</label>
+                                <div class="color-wrap"><input type="color" id="fg-color-g2" value="#ec4899"><input type="text" id="hex-fgg2" class="form-control" value="#ec4899"></div>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Gradient Rotation (<span id="fg-rot-val">45</span>°)</label>
+                            <div class="slider-wrap"><input type="range" id="fg-rot" min="0" max="360" value="45"></div>
+                        </div>
+                    </div>
+
+                    <label style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; margin-top: 1.5rem; display: block;">Background</label>
+                    <div class="segmented-control">
+                        <div class="segment-btn active" onclick="toggleColorMode('bg', 'solid')">Solid Color</div>
+                        <div class="segment-btn" onclick="toggleColorMode('bg', 'grad')">Gradient</div>
+                    </div>
+
+                    <div id="bg-solid-wrap">
+                        <div class="form-group">
+                            <div class="color-wrap">
+                                <input type="color" id="bg-color1" value="#ffffff">
+                                <input type="text" id="hex-bg1" class="form-control" value="#ffffff">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="bg-grad-wrap" style="display: none; padding: 1rem; background: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border); margin-bottom: 1.25rem;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Color 1</label>
+                                <div class="color-wrap"><input type="color" id="bg-color-g1" value="#ffffff"><input type="text" id="hex-bgg1" class="form-control" value="#ffffff"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Color 2</label>
+                                <div class="color-wrap"><input type="color" id="bg-color-g2" value="#f1f5f9"><input type="text" id="hex-bgg2" class="form-control" value="#f1f5f9"></div>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Gradient Rotation (<span id="bg-rot-val">135</span>°)</label>
+                            <div class="slider-wrap"><input type="range" id="bg-rot" min="0" max="360" value="135"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="section-header"><i class="fa-solid fa-shapes"></i> 3. Shapes & Icons</div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Dot Pattern</label>
+                            <select id="style-dots" class="form-control">
+                                <option value="square">Square</option>
+                                <option value="dots">Dots</option>
+                                <option value="rounded">Rounded</option>
+                                <option value="classy" selected>Classy</option>
+                                <option value="classy-rounded">Classy Rounded</option>
+                                <option value="extra-rounded">Extra Rounded</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Corner Squares</label>
+                            <select id="style-corners" class="form-control">
+                                <option value="square">Square</option>
+                                <option value="dot">Dot</option>
+                                <option value="extra-rounded" selected>Extra Rounded</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <label style="font-size: 0.85rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; display: block; color: var(--text-muted);">Center Icon (Instant Load)</label>
+                    <div class="logo-grid" id="preset-logos">
+                        <div class="logo-preset active" data-icon="none" title="No Logo"><i class="fa-solid fa-ban"></i></div>
+                        <div class="logo-preset" data-icon="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 512'><path d='M320 448c-35.3 0-64-28.7-64-64s28.7-64 64-64 64 28.7 64 64-28.7 64-64 64zm181-128c-47-47-110-73-181-73s-134 26-181 73c-9 9-24 9-33 0l-45-45c-9-9-9-24 0-33 71-71 166-111 259-111s188 40 259 111c9 9 9 24 0 33l-45 45c-9 9-24 9-33 0z'/></svg>" title="WiFi"><i class="fa-solid fa-wifi"></i></div>
+                        <div class="logo-preset" data-icon="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 496 512'><path d='M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3 .3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5 .3-6.2 2.3zm44.2-1.7c-2.9 .7-4.9 2.6-4.6 4.9 .3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3 .7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3 .3 2.9 2.3 3.9 1.6 1 3.6 .7 4.3-.7 .7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3 .7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3 .7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z'/></svg>" title="GitHub"><i class="fa-brands fa-github"></i></div>
+                        <div class="logo-preset" data-icon="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 576 512'><path d='M549.7 124.1c-6.3-23.7-24.8-42.3-48.3-48.6C458.8 64 288 64 288 64S117.2 64 74.6 75.5c-23.5 6.3-42 24.9-48.3 48.6-11.4 42.9-11.4 132.3-11.4 132.3s0 89.4 11.4 132.3c6.3 23.7 24.8 41.5 48.3 47.8C117.2 448 288 448 288 448s170.8 0 213.4-11.5c23.5-6.3 42-24.2 48.3-47.8 11.4-42.9 11.4-132.3 11.4-132.3s0-89.4-11.4-132.3zm-317.5 213.5V175.2l142.7 81.2-142.7 81.2z'/></svg>" title="YouTube"><i class="fa-brands fa-youtube"></i></div>
+                        <div class="logo-preset" data-icon="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'><path d='M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z'/></svg>" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></div>
+                        <div class="logo-preset" data-icon="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M389.2 48h70.6L305.6 224.2 487 464H345L233.7 318.6 106.5 464H35.8L200.7 275.5 26.8 48H172.4L272.9 180.9 389.2 48zM364.4 421.8h39.1L151.1 88h-42L364.4 421.8z'/></svg>" title="X / Twitter"><i class="fa-brands fa-x-twitter"></i></div>
+                        <div class="logo-preset" data-icon="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 384 512'><path d='M168.3 499.2C116.1 435 0 279.4 0 192C0 85.96 85.96 0 192 0C298 0 384 85.96 384 192C384 279.4 267.9 435 215.7 499.2C203.4 514.5 180.6 514.5 168.3 499.2H168.3zM192 256C227.3 256 256 227.3 256 192C256 156.7 227.3 128 192 128C156.7 128 128 156.7 128 192C128 227.3 156.7 256 192 256z'/></svg>" title="Maps"><i class="fa-solid fa-map-location-dot"></i></div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label>Or Upload Custom Logo</label>
+                        <input type="file" id="input-logo-file" class="form-control" accept="image/png, image/jpeg, image/svg+xml">
+                    </div>
+
+                    <div class="form-row" style="margin-top: 1.5rem;">
+                        <div class="form-group">
+                            <label>Error Correction</label>
+                            <select id="setting-ec" class="form-control">
+                                <option value="L">Low (7%)</option>
+                                <option value="M">Medium (15%)</option>
+                                <option value="Q" selected>Quartile (25%)</option>
+                                <option value="H">High (30% - Best for Logos)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>White Margin</label>
+                            <select id="setting-margin" class="form-control">
+                                <option value="0">None (0px)</option>
+                                <option value="5">Small (5px)</option>
+                                <option value="10" selected>Medium (10px)</option>
+                                <option value="20">Large (20px)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="preview-wrapper">
+                <div class="preview-panel">
+                    <div id="qr-canvas">
+                        <div class="live-indicator">LIVE</div>
+                        </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" id="btn-copy" onclick="copyQR()">
+                            <i class="fa-regular fa-copy icon-copy"></i><span class="text-copy">Copy Image</span>
+                            <i class="fa-solid fa-check icon-check"></i><span class="text-copied">Copied!</span>
+                        </button>
+                        <button class="btn btn-primary" onclick="downloadQR()">
+                            <i class="fa-solid fa-download"></i> Download PNG
+                        </button>
+                    </div>
+
+                    <div class="payload-box">
+                        <label>Payload Data</label>
+                        <div id="payload-display" class="payload-content"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Navigation ---
+        function goBack() { window.history.length > 1 ? window.history.back() : window.location.href = '/'; }
+
+        // --- View Tabs ---
+        const contentTabs = document.querySelectorAll('#content-tabs .segment-btn');
+        const views = document.querySelectorAll('.input-view');
+        let currentType = 'link';
+
+        contentTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                contentTabs.forEach(t => t.classList.remove('active'));
+                views.forEach(v => v.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.target).classList.add('active');
+                currentType = tab.dataset.target.replace('view-', '');
+                triggerLiveUpdate();
+            });
+        });
+
+        // --- Color Mode Toggles (Solid vs Gradient) ---
+        let fgMode = 'solid';
+        let bgMode = 'solid';
+
+        function toggleColorMode(target, mode) {
+            if (target === 'fg') {
+                fgMode = mode;
+                document.getElementById('fg-solid-wrap').style.display = mode === 'solid' ? 'block' : 'none';
+                document.getElementById('fg-grad-wrap').style.display = mode === 'grad' ? 'block' : 'none';
+            } else {
+                bgMode = mode;
+                document.getElementById('bg-solid-wrap').style.display = mode === 'solid' ? 'block' : 'none';
+                document.getElementById('bg-grad-wrap').style.display = mode === 'grad' ? 'block' : 'none';
+            }
+            // Update UI active states
+            const btns = event.target.parentElement.querySelectorAll('.segment-btn');
+            btns.forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            triggerLiveUpdate();
+        }
+
+        // Sync Hex & Color inputs
+        const syncColor = (colorId, textId) => {
+            const colorInput = document.getElementById(colorId);
+            const textInput = document.getElementById(textId);
+            colorInput.addEventListener('input', e => { textInput.value = e.target.value; triggerLiveUpdate(); });
+            textInput.addEventListener('input', e => {
+                if(/^#[0-9A-F]{6}$/i.test(e.target.value)) { colorInput.value = e.target.value; triggerLiveUpdate(); }
+            });
+        }
+        syncColor('fg-color1', 'hex-fg1'); syncColor('fg-color-g1', 'hex-fgg1'); syncColor('fg-color-g2', 'hex-fgg2');
+        syncColor('bg-color1', 'hex-bg1'); syncColor('bg-color-g1', 'hex-bgg1'); syncColor('bg-color-g2', 'hex-bgg2');
+
+        // Rotation slider text updates
+        document.getElementById('fg-rot').addEventListener('input', e => { document.getElementById('fg-rot-val').innerText = e.target.value; triggerLiveUpdate(); });
+        document.getElementById('bg-rot').addEventListener('input', e => { document.getElementById('bg-rot-val').innerText = e.target.value; triggerLiveUpdate(); });
+
+
+        // --- Logo Handling ---
+        let currentLogoUrl = "";
+
+        // Embedded Presets
+        document.querySelectorAll('.logo-preset').forEach(preset => {
+            preset.addEventListener('click', (e) => {
+                document.querySelectorAll('.logo-preset').forEach(p => p.classList.remove('active'));
+                preset.classList.add('active');
+                document.getElementById('input-logo-file').value = ''; 
+                currentLogoUrl = preset.dataset.icon === 'none' ? "" : preset.dataset.icon;
+                
+                // If it's an SVG data URI, we dynamically inject the current foreground color to match the design
+                if(currentLogoUrl.includes('<svg')) {
+                    // Extract solid foreground color
+                    let fillHex = fgMode === 'solid' ? document.getElementById('hex-fg1').value : document.getElementById('hex-fgg1').value;
+                    fillHex = fillHex.replace('#', '%23'); // URL encode the hex hash
+                    
+                    // Replace the fill attribute if it exists, or add it
+                    if(currentLogoUrl.includes("fill=")) {
+                        currentLogoUrl = currentLogoUrl.replace(/fill='[^']+'/, `fill='${fillHex}'`);
+                    } else {
+                        currentLogoUrl = currentLogoUrl.replace("<path ", `<path fill='${fillHex}' `);
+                    }
+                }
+                triggerLiveUpdate();
+            });
+        });
+
+        // Custom File
+        document.getElementById('input-logo-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.querySelectorAll('.logo-preset').forEach(p => p.classList.remove('active'));
+                const reader = new FileReader();
+                reader.onload = (event) => { currentLogoUrl = event.target.result; triggerLiveUpdate(); };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // --- Helpers ---
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        document.getElementById('input-lat').value = position.coords.latitude;
+                        document.getElementById('input-lng').value = position.coords.longitude;
+                        triggerLiveUpdate();
+                    }, (error) => alert("Please allow location access.")
+                );
+            }
+        }
+
+        function buildDataString() {
+            switch(currentType) {
+                case 'link': 
+                    let url = document.getElementById('input-url').value;
+                    if(url && !url.startsWith('http')) url = 'https://' + url;
+                    return url;
+                case 'text': return document.getElementById('input-text').value;
+                case 'location':
+                    const lat = document.getElementById('input-lat').value;
+                    const lng = document.getElementById('input-lng').value;
+                    // Updated to robust Google Maps URL
+                    return lat && lng ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : '';
+                case 'wifi':
+                    const ssid = document.getElementById('input-ssid').value;
+                    const pass = document.getElementById('input-wifipass').value;
+                    const type = document.getElementById('input-wifitype').value;
+                    return ssid ? `WIFI:T:${type};S:${ssid};P:${pass};;` : '';
+                case 'email':
+                    const email = document.getElementById('input-email').value;
+                    const sub = document.getElementById('input-subject').value;
+                    return email ? `mailto:${email}?subject=${encodeURIComponent(sub)}` : '';
+                default: return '';
+            }
+        }
+
+        // --- QR Engine ---
+        let qrCode = null;
+        const canvasContainer = document.getElementById('qr-canvas');
+
+        function generateQR() {
+            const payload = buildDataString();
+            if (!payload) return;
+            canvasContainer.classList.remove('updating');
+
+            // Construct Foreground Options
+            let dotsOptions = { type: document.getElementById('style-dots').value };
+            let cornersOptions = { type: document.getElementById('style-corners').value };
+            
+            if (fgMode === 'solid') {
+                const c = document.getElementById('hex-fg1').value;
+                dotsOptions.color = c;
+                cornersOptions.color = c;
+            } else {
+                const c1 = document.getElementById('hex-fgg1').value;
+                const c2 = document.getElementById('hex-fgg2').value;
+                const rot = parseInt(document.getElementById('fg-rot').value) * (Math.PI / 180);
+                const grad = { type: 'linear', rotation: rot, colorStops: [{ offset: 0, color: c1 }, { offset: 1, color: c2 }] };
+                dotsOptions.gradient = grad;
+                cornersOptions.gradient = grad;
+            }
+
+            // Construct Background Options
+            let bgOptions = {};
+            if (bgMode === 'solid') {
+                bgOptions.color = document.getElementById('hex-bg1').value;
+            } else {
+                const c1 = document.getElementById('hex-bgg1').value;
+                const c2 = document.getElementById('hex-bgg2').value;
+                const rot = parseInt(document.getElementById('bg-rot').value) * (Math.PI / 180);
+                bgOptions.gradient = { type: 'linear', rotation: rot, colorStops: [{ offset: 0, color: c1 }, { offset: 1, color: c2 }] };
+            }
+
+            canvasContainer.innerHTML = '<div class="live-indicator">LIVE</div>';
+            
+            qrCode = new QRCodeStyling({
+                width: 320, height: 320, data: payload,
+                margin: parseInt(document.getElementById('setting-margin').value),
+                qrOptions: { typeNumber: 0, mode: "Byte", errorCorrectionLevel: document.getElementById('setting-ec').value },
+                imageOptions: { hideBackgroundDots: true, imageSize: 0.4, margin: 5, crossOrigin: "anonymous" },
+                dotsOptions: dotsOptions,
+                backgroundOptions: bgOptions,
+                cornersSquareOptions: cornersOptions,
+                cornersDotOptions: cornersOptions,
+                image: currentLogoUrl
+            });
+
+            qrCode.append(canvasContainer);
+
+            // Update UI Payload box
+            const payloadBox = document.getElementById('payload-display');
+            if (payload.startsWith('http')) {
+                payloadBox.innerHTML = `<a class="payload-link" href="${payload}" target="_blank">${payload}</a>`;
+            } else {
+                payloadBox.textContent = payload;
+            }
+        }
+
+        // --- Live Preview Debounce ---
+        let timeout = null;
+        function triggerLiveUpdate() {
+            canvasContainer.classList.add('updating');
+            clearTimeout(timeout);
+            timeout = setTimeout(generateQR, 1000); // 1 sec gap
+        }
+        document.querySelectorAll('input, select, textarea').forEach(el => el.addEventListener('input', triggerLiveUpdate));
+
+        // --- Actions ---
+        function downloadQR() { if (qrCode) qrCode.download({ name: "qr-studio", extension: "png" }); }
+
+        async function copyQR() {
+            if (!qrCode) return;
+            const btn = document.getElementById('btn-copy');
+            try {
+                const blob = await qrCode.getRawData("png");
+                await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]);
+                // CSS class handles the text/icon swap beautifully without layout shifts
+                btn.classList.add('copied');
+                setTimeout(() => btn.classList.remove('copied'), 2000);
+            } catch (err) {
+                alert("Clipboard access failed. Your browser might block this feature, or you are not on HTTPS.");
+            }
+        }
+
+        // Initial Generation
+        setTimeout(generateQR, 100);
+
+    </script>
+</body>
+</html>

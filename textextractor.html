@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Select OCR Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --bg-panel: #ffffff;
+            --bg-canvas: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --border: #e2e8f0;
+            --border-dark: #cbd5e1;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+        body { background: var(--bg-body); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Navbar */
+        .navbar { background: var(--bg-panel); padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); z-index: 100; }
+        .brand { font-size: 1.2rem; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+        @media (max-width: 600px) { .brand span { display: none; } }
+        
+        .btn { padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-secondary { background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border-dark); }
+        .btn-secondary:hover { background: #e2e8f0; }
+
+        /* Main Layout */
+        .workspace { display: flex; flex-direction: column; flex-grow: 1; height: calc(100vh - 65px); }
+        @media (min-width: 900px) { .workspace { flex-direction: row; } }
+
+        /* Canvas Area */
+        .canvas-container { flex-grow: 1; display: flex; flex-direction: column; position: relative; background: var(--bg-canvas); overflow: hidden; justify-content: center; align-items: center; }
+        
+        .instruction-bar { position: absolute; top: 1rem; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.95); padding: 0.6rem 1.2rem; border-radius: 30px; font-size: 0.85rem; font-weight: 600; color: var(--text-main); z-index: 10; box-shadow: var(--shadow); border: 1px solid var(--border); pointer-events: none; transition: opacity 0.3s; white-space: nowrap; }
+
+        #image-canvas { max-width: 100%; max-height: 100%; object-fit: contain; cursor: crosshair; box-shadow: 0 0 20px rgba(0,0,0,0.05); display: none; background: white; touch-action: none; }
+
+        #drop-zone { position: absolute; inset: 1.5rem; border: 2px dashed #94a3b8; border-radius: var(--radius-lg); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; transition: all 0.3s ease; background: var(--bg-panel); z-index: 20; box-shadow: var(--shadow); }
+        #drop-zone:hover, #drop-zone.dragover { border-color: var(--primary); background: #eef2ff; }
+        #drop-zone i { font-size: 3.5rem; color: #94a3b8; margin-bottom: 1rem; transition: color 0.3s; }
+        #drop-zone:hover i, #drop-zone.dragover i { color: var(--primary); }
+        #file-input { display: none; }
+
+        /* Results Area */
+        .results-panel { width: 100%; height: 40vh; background: var(--bg-panel); border-top: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; padding: 1.25rem; z-index: 50; box-shadow: 0 -4px 10px rgba(0,0,0,0.03); }
+        @media (min-width: 900px) { .results-panel { width: 380px; height: 100%; border-top: none; border-left: 1px solid var(--border); box-shadow: -4px 0 10px rgba(0,0,0,0.03); } }
+
+        .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .results-header h3 { font-size: 1.05rem; color: var(--text-main); font-weight: 700; }
+        
+        /* Settings Box */
+        .settings-box { background: #f8fafc; border: 1px solid var(--border); padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; }
+        .settings-label { font-size: 0.85rem; font-weight: 600; color: var(--text-main); display: flex; flex-direction: column; }
+        .settings-sub { font-size: 0.75rem; color: var(--text-muted); font-weight: 400; margin-top: 2px; }
+        
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        #result-text { flex-grow: 1; width: 100%; padding: 1rem; border: 1px solid var(--border-dark); border-radius: var(--radius-md); background: #f8fafc; font-size: 0.95rem; line-height: 1.6; color: var(--text-main); resize: none; transition: border 0.2s; }
+        #result-text:focus { outline: none; border-color: var(--primary); background: #ffffff; }
+
+        /* Loading Overlay */
+        #loading-overlay { position: absolute; inset: 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(4px); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 50; }
+        .spinner { border: 4px solid #e2e8f0; border-top: 4px solid var(--primary); border-radius: 50%; width: 45px; height: 45px; animation: spin 1s linear infinite; margin-bottom: 1rem; }
+        .progress-bar-container { width: 80%; max-width: 250px; height: 6px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-top: 1rem; }
+        #progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.2s; }
+        #loading-text { font-weight: 700; font-size: 1.05rem; color: var(--text-main); }
+        #loading-subtext { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; text-align: center; }
+
+        .btn-copy.copied { background: var(--success); color: white; border-color: var(--success); }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Hidden preview canvas for debugging/preprocessing */
+        #prep-canvas { display: none; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="brand"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>Smart Select Pro</span></div>
+        <div class="nav-actions">
+            <button class="btn btn-secondary" onclick="resetWorkspace()">
+                <i class="fa-solid fa-upload"></i> <span class="hide-mobile">New Image</span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="workspace">
+        
+        <div class="canvas-container" id="canvas-wrapper">
+            <div id="drop-zone">
+                <i class="fa-regular fa-image"></i>
+                <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--text-main);">Upload an image</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; padding: 0 1rem;">Drag & drop, click to browse, or paste (Ctrl+V)</p>
+                <input type="file" id="file-input" accept="image/*">
+            </div>
+
+            <div class="instruction-bar" id="instruction-bar" style="display: none;">
+                <i class="fa-solid fa-hand-pointer" style="margin-right: 6px; color: var(--primary)"></i> Drag over text to extract
+            </div>
+
+            <canvas id="image-canvas"></canvas>
+            <canvas id="prep-canvas"></canvas> <div id="loading-overlay">
+                <div class="spinner"></div>
+                <div id="loading-text">Extracting Text...</div>
+                <div class="progress-bar-container"><div id="progress-bar"></div></div>
+                <div id="loading-subtext">Running OCR Engine</div>
+            </div>
+        </div>
+
+        <div class="results-panel">
+            
+            <div class="settings-box">
+                <div class="settings-label">
+                    Enhance Stylized Fonts
+                    <span class="settings-sub">Forces B&W high-contrast for messy text</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-enhance">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="results-header">
+                <h3><i class="fa-solid fa-align-left" style="color: var(--primary); margin-right: 0.5rem;"></i> Extracted Text</h3>
+                <button class="btn btn-primary btn-copy" id="btn-copy" onclick="copyText()">
+                    <i class="fa-regular fa-copy"></i> Copy
+                </button>
+            </div>
+            
+            <textarea id="result-text" placeholder="Extracted text will appear here..."></textarea>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Elements ---
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const canvas = document.getElementById('image-canvas');
+        const prepCanvas = document.getElementById('prep-canvas'); // For Preprocessing
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const resultText = document.getElementById('result-text');
+        const instructionBar = document.getElementById('instruction-bar');
+        const toggleEnhance = document.getElementById('toggle-enhance');
+        
+        // Loading Elements
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const loadingSubtext = document.getElementById('loading-subtext');
+        const progressBar = document.getElementById('progress-bar');
+
+        // --- State Variables ---
+        let originalImage = null; 
+        let isDrawing = false;
+        let startX, startY, currentX, currentY;
+        let hasImage = false;
+
+        // --- Event Listeners for Input ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => { if (e.target.files.length) loadImage(e.target.files[0]); fileInput.value = ''; });
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files.length) loadImage(e.dataTransfer.files[0]); });
+        
+        window.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let item of items) { if (item.type.indexOf('image') === 0) { loadImage(item.getAsFile()); break; } }
+        });
+
+        function resetWorkspace() {
+            hasImage = false;
+            dropZone.style.display = 'flex';
+            canvas.style.display = 'none';
+            instructionBar.style.display = 'none';
+            resultText.value = '';
+            originalImage = null;
+        }
+
+        function loadImage(file) {
+            if (!file || !file.type.startsWith('image/')) return alert('Please provide a valid image file.');
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    originalImage = img;
+                    hasImage = true;
+                    canvas.width = img.width; canvas.height = img.height;
+                    dropZone.style.display = 'none';
+                    canvas.style.display = 'block';
+                    instructionBar.style.display = 'block';
+                    resultText.value = '';
+                    redrawCanvas();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- Drawing Logic ---
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            let clientX, clientY;
+
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+            } else if (e.changedTouches && e.changedTouches.length > 0) {
+                clientX = e.changedTouches[0].clientX; clientY = e.changedTouches[0].clientY;
+            } else {
+                clientX = e.clientX; clientY = e.clientY;
+            }
+            return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+        }
+
+        function startDrawing(e) {
+            if (!hasImage) return;
+            isDrawing = true; instructionBar.style.opacity = '0';
+            const pos = getPos(e);
+            startX = pos.x; startY = pos.y; currentX = pos.x; currentY = pos.y;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault(); 
+            const pos = getPos(e);
+            currentX = pos.x; currentY = pos.y;
+            redrawCanvas();
+        }
+
+        function finishDrawing() {
+            if (!isDrawing) return;
+            isDrawing = false; instructionBar.style.opacity = '1';
+
+            const x = Math.min(startX, currentX);
+            const y = Math.min(startY, currentY);
+            const w = Math.abs(currentX - startX);
+            const h = Math.abs(currentY - startY);
+
+            if (w < 15 || h < 15) { redrawCanvas(); return; }
+
+            extractRegion(x, y, w, h);
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', finishDrawing);
+        canvas.addEventListener('mouseleave', () => { if (isDrawing) finishDrawing(); });
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', finishDrawing);
+
+        function redrawCanvas() {
+            if (!originalImage) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(originalImage, 0, 0);
+
+            if (isDrawing) {
+                const w = currentX - startX; const h = currentY - startY;
+                ctx.fillStyle = 'rgba(79, 70, 229, 0.15)'; ctx.fillRect(startX, startY, w, h);
+                ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = Math.max(2, canvas.width / 500); ctx.strokeRect(startX, startY, w, h);
+            }
+        }
+
+        // --- OCR & Image Preprocessing Pipeline ---
+
+        // This function mathematically cleans messy images
+        function preprocessImage(sourceCanvas) {
+            const scale = 3; // Upscale 300% for better AI clarity
+            prepCanvas.width = sourceCanvas.width * scale;
+            prepCanvas.height = sourceCanvas.height * scale;
+            const prepCtx = prepCanvas.getContext('2d');
+            
+            // Draw scaled image
+            prepCtx.drawImage(sourceCanvas, 0, 0, prepCanvas.width, prepCanvas.height);
+            
+            // Extract raw pixels
+            const imageData = prepCtx.getImageData(0, 0, prepCanvas.width, prepCanvas.height);
+            const data = imageData.data;
+
+            // Binarization (Pure Black & White based on luminance)
+            for (let i = 0; i < data.length; i += 4) {
+                // Calculate perceived brightness of the pixel
+                const brightness = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
+                
+                // If pixel is darker than grey, make it pitch black. If lighter, make it pure white.
+                // Threshold is 140 (slightly biased towards making faint text darker)
+                const color = brightness > 140 ? 255 : 0; 
+
+                data[i] = color;       // Red
+                data[i + 1] = color;   // Green
+                data[i + 2] = color;   // Blue
+                // data[i+3] is Alpha, leave it alone
+            }
+
+            // Put processed pixels back on canvas
+            prepCtx.putImageData(imageData, 0, 0);
+            return prepCanvas;
+        }
+
+        function extractRegion(x, y, w, h) {
+            const cropCanvas = document.createElement('canvas');
+            cropCanvas.width = w; cropCanvas.height = h;
+            const cropCtx = cropCanvas.getContext('2d');
+            cropCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
+            
+            const isEnhanced = toggleEnhance.checked;
+            
+            if (isEnhanced) {
+                // Run the image through our cleaning pipeline first
+                const cleanedCanvas = preprocessImage(cropCanvas);
+                runOCR(cleanedCanvas, true);
+            } else {
+                runOCR(cropCanvas, false);
+            }
+        }
+
+        async function runOCR(imageSource, isEnhanced) {
+            loadingOverlay.style.display = 'flex';
+            resultText.value = '';
+
+            try {
+                const worker = await Tesseract.createWorker('eng', 1, {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            loadingText.innerText = 'Scanning Selection...';
+                            loadingSubtext.innerText = isEnhanced ? 'Analyzing enhanced B&W patterns' : 'Analyzing character patterns';
+                            progressBar.style.width = `${Math.round(m.progress * 100)}%`;
+                        } else {
+                            loadingText.innerText = 'Initializing...';
+                            loadingSubtext.innerText = m.status;
+                            progressBar.style.width = '15%';
+                        }
+                    }
+                });
+
+                // If enhanced mode is on, restrict characters to stop garbage symbols from stylized loops
+                if (isEnhanced) {
+                    await worker.setParameters({
+                        tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.,!?@#$%&*()_-+="\':;<> ',
+                    });
+                }
+
+                const { data } = await worker.recognize(imageSource);
+                await worker.terminate();
+
+                loadingOverlay.style.display = 'none';
+                
+                let finalTxt = data.text.trim();
+                if (finalTxt === '') {
+                    resultText.value = "No text found in that selection.";
+                } else {
+                    // Quick cleanup for common OCR mistakes on stylish fonts
+                    finalTxt = finalTxt.replace(/\|/g, 'I'); 
+                    resultText.value = finalTxt;
+                }
+
+            } catch (err) {
+                console.error(err);
+                loadingOverlay.style.display = 'none';
+                resultText.value = "Error during extraction.";
+            }
+        }
+
+        // --- Utilities ---
+        function copyText() {
+            const text = resultText.value;
+            if (!text || text === "No text found in that selection.") return;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('btn-copy');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> Copied!`;
+                btn.classList.add('copied');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

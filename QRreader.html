@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-QR Reader Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f6f8fb 0%, #e5eef7 100%);
+            --surface: rgba(255, 255, 255, 0.9);
+            --surface-solid: #ffffff;
+            --text: #0f172a;
+            --text-light: #64748b;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --border: rgba(226, 232, 240, 0.8);
+            --radius: 16px;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        
+        body { 
+            background: var(--bg-gradient); 
+            color: var(--text); 
+            min-height: 100vh;
+            padding-bottom: 3rem;
+        }
+
+        /* Navigation Bar */
+        .navbar {
+            padding: 1.5rem 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--surface-solid);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem 0.5rem 0.75rem;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .back-btn:hover {
+            background: #f8fafc;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            color: var(--primary);
+        }
+
+        .back-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 0 1rem; }
+
+        .header { text-align: center; margin-bottom: 2.5rem; animation: fadeIn 0.5s ease-out; }
+        .header h2 { font-weight: 800; font-size: 2.2rem; color: var(--text); letter-spacing: -0.02em; }
+        .header p { color: var(--text-light); margin-top: 0.5rem; font-size: 1.05rem; }
+
+        /* Drop Zone */
+        #drop-zone {
+            background: var(--surface); 
+            backdrop-filter: blur(10px);
+            border: 2px dashed #cbd5e1; 
+            border-radius: var(--radius);
+            padding: 4rem 2rem; 
+            text-align: center; 
+            cursor: pointer; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-lg); 
+            position: relative; 
+            overflow: hidden;
+            animation: slideUp 0.5s ease-out;
+        }
+        #drop-zone:hover, #drop-zone.dragover { 
+            border-color: var(--primary); 
+            background: rgba(238, 242, 255, 0.8); 
+            transform: translateY(-2px);
+        }
+        #drop-zone svg { width: 64px; height: 64px; fill: #94a3b8; margin-bottom: 1.5rem; transition: fill 0.3s; }
+        #drop-zone:hover svg, #drop-zone.dragover svg { fill: var(--primary); }
+        #file-input { display: none; }
+
+        /* Workspace */
+        #workspace { display: none; animation: fadeIn 0.4s ease-out; }
+        
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .toolbar h3 { font-size: 1.25rem; font-weight: 700; }
+        
+        .btn { 
+            background: var(--surface-solid); border: 1px solid var(--border); padding: 0.5rem 1.25rem; 
+            border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text); 
+            transition: all 0.2s; box-shadow: var(--shadow-sm);
+        }
+        .btn:hover { background: #f8fafc; border-color: #cbd5e1; transform: translateY(-1px); }
+
+        .canvas-container {
+            position: relative; background: var(--surface-solid); padding: 1rem; 
+            border-radius: var(--radius); box-shadow: var(--shadow-lg); text-align: center;
+            overflow: hidden; margin-bottom: 2.5rem;
+        }
+        
+        #preview-canvas { max-width: 100%; max-height: 60vh; border-radius: 8px; object-fit: contain; }
+
+        /* Radar Animation */
+        #scan-overlay {
+            position: absolute; top: 1rem; left: 1rem; right: 1rem; bottom: 1rem;
+            border-radius: 8px; pointer-events: none; display: none; overflow: hidden;
+        }
+        .scan-line {
+            position: absolute; width: 100%; height: 3px; background: rgba(16, 185, 129, 0.9);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.8), 0 0 40px rgba(16, 185, 129, 0.4);
+            animation: scan 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        #scan-status {
+            position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.85); color: white; padding: 0.6rem 1.5rem;
+            border-radius: 99px; font-weight: 500; font-size: 0.875rem; backdrop-filter: blur(8px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        @keyframes scan {
+            0% { top: 0; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        /* Results Grid */
+        #results-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem; }
+        
+        .result-card {
+            background: var(--surface-solid); border: 1px solid var(--border); border-top: 4px solid var(--primary);
+            border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm);
+            display: flex; flex-direction: column; gap: 1rem; animation: slideUp 0.3s ease-out; 
+            word-break: break-all; transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .result-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+        .result-card.error { border-top-color: #ef4444; text-align: center; color: #ef4444; font-weight: 500; grid-column: 1 / -1; }
+        
+        .result-header { display: flex; justify-content: space-between; align-items: center; }
+        .result-badge { background: #eef2ff; color: var(--primary); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;}
+        .result-text { font-weight: 500; color: var(--text); text-decoration: none; font-size: 1.05rem; }
+        .result-text.is-link { color: var(--primary); text-decoration: underline; }
+        
+        .copy-btn { 
+            width: 100%; padding: 0.75rem; background: #f1f5f9; border: none; border-radius: 8px; 
+            cursor: pointer; font-weight: 600; color: var(--text-light); transition: all 0.2s; 
+            font-size: 0.9rem;
+        }
+        .copy-btn:hover { background: #e2e8f0; color: var(--text); }
+        .copy-btn.copied { background: var(--success); color: white; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="javascript:void(0)" onclick="goBack()" class="back-btn">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+            Back
+        </a>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h2>Multi-QR Reader Pro</h2>
+            <p>Upload an image with multiple QR codes. The sector-scanner will find them.</p>
+        </div>
+        
+        <div id="drop-zone">
+            <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+            <p style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text);">Drag & Drop an image</p>
+            <p style="color: var(--text-light); font-size: 0.95rem;">or click to browse • Supports Ctrl+V pasting</p>
+            <input type="file" id="file-input" accept="image/*">
+        </div>
+
+        <div id="workspace">
+            <div class="toolbar">
+                <h3 id="result-count">0 Codes Found</h3>
+                <button class="btn" id="btn-clear">Clear & Upload New</button>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="preview-canvas"></canvas>
+                <div id="scan-overlay">
+                    <div class="scan-line"></div>
+                    <div id="scan-status">Scanning...</div>
+                </div>
+            </div>
+            
+            <div id="results-container"></div>
+        </div>
+
+        <canvas id="process-canvas" style="display:none;"></canvas>
+    </div>
+
+    <script>
+        // --- Navigation Logic ---
+        function goBack() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '/'; // Fallback to homepage if opened in a new tab
+            }
+        }
+
+        // --- Scanner Elements ---
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const workspace = document.getElementById('workspace');
+        const canvas = document.getElementById('preview-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        const processCanvas = document.getElementById('process-canvas');
+        const processCtx = processCanvas.getContext('2d', { willReadFrequently: true });
+
+        const resultsContainer = document.getElementById('results-container');
+        const scanOverlay = document.getElementById('scan-overlay');
+        const scanStatus = document.getElementById('scan-status');
+        const btnClear = document.getElementById('btn-clear');
+        const resultCountText = document.getElementById('result-count');
+
+        // --- 1. Event Listeners ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleImage(e.target.files[0]); fileInput.value = ''; });
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files.length) handleImage(e.dataTransfer.files[0]); });
+        window.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let item of items) { if (item.type.indexOf('image') === 0) { handleImage(item.getAsFile()); break; } }
+        });
+
+        btnClear.addEventListener('click', () => {
+            workspace.style.display = 'none';
+            dropZone.style.display = 'block';
+            resultsContainer.innerHTML = '';
+        });
+
+        const yieldThread = () => new Promise(resolve => setTimeout(resolve, 5));
+
+        // --- 2. Image Loading ---
+        function handleImage(file) {
+            if (!file || !file.type.startsWith('image/')) return alert('Please provide a valid image file.');
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    dropZone.style.display = 'none';
+                    workspace.style.display = 'block';
+                    resultsContainer.innerHTML = '';
+                    resultCountText.textContent = "Scanning...";
+                    
+                    canvas.width = processCanvas.width = img.width;
+                    canvas.height = processCanvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    processCtx.drawImage(img, 0, 0);
+
+                    runScanner(img);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- 3. The Highly-Accurate Scanning Engine ---
+        async function runScanner(img) {
+            scanOverlay.style.display = 'block';
+            let foundCodes = [];
+            let uniqueData = new Set();
+
+            function addCode(data, locationData) {
+                if (!uniqueData.has(data)) {
+                    uniqueData.add(data);
+                    foundCodes.push({ data, loc: locationData });
+                    return true;
+                }
+                return false;
+            }
+
+            // PASS 1: Native Barcode API
+            scanStatus.textContent = "Pass 1: Native Scan...";
+            await yieldThread();
+            if ('BarcodeDetector' in window) {
+                try {
+                    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+                    const barcodes = await detector.detect(canvas);
+                    barcodes.forEach(b => addCode(b.rawValue, { type: 'rect', box: b.boundingBox }));
+                } catch (err) { console.warn('Native BarcodeDetector failed', err); }
+            }
+
+            // PASS 2: Full Image jsQR Masking
+            scanStatus.textContent = "Pass 2: Software Scan...";
+            await yieldThread();
+            let keepSearching = true;
+            let loops = 0;
+            while (keepSearching && loops < 20) {
+                loops++;
+                const imgData = processCtx.getImageData(0, 0, processCanvas.width, processCanvas.height);
+                const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "attemptBoth" });
+                
+                if (code) {
+                    addCode(code.data, { type: 'poly', points: code.location });
+                    
+                    const loc = code.location;
+                    const minX = Math.min(loc.topLeftCorner.x, loc.bottomLeftCorner.x);
+                    const maxX = Math.max(loc.topRightCorner.x, loc.bottomRightCorner.x);
+                    const minY = Math.min(loc.topLeftCorner.y, loc.topRightCorner.y);
+                    const maxY = Math.max(loc.bottomLeftCorner.y, loc.bottomRightCorner.y);
+                    
+                    processCtx.fillStyle = 'black';
+                    processCtx.fillRect(minX - 40, minY - 40, (maxX - minX) + 80, (maxY - minY) + 80);
+                } else {
+                    keepSearching = false; 
+                }
+            }
+
+            // PASS 3: The 3x3 Sector Grid
+            scanStatus.textContent = "Pass 3: Sector Grid Scan...";
+            await yieldThread();
+            
+            const cols = 3; const rows = 3;
+            const chunkW = Math.floor(img.width / cols);
+            const chunkH = Math.floor(img.height / rows);
+            const overlap = 60;
+
+            processCtx.drawImage(img, 0, 0, processCanvas.width, processCanvas.height);
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const startX = Math.max(0, (c * chunkW) - overlap);
+                    const startY = Math.max(0, (r * chunkH) - overlap);
+                    const endX = Math.min(img.width, ((c + 1) * chunkW) + overlap);
+                    const endY = Math.min(img.height, ((r + 1) * chunkH) + overlap);
+                    
+                    const scanW = endX - startX;
+                    const scanH = endY - startY;
+
+                    const sectorData = processCtx.getImageData(startX, startY, scanW, scanH);
+                    const code = jsQR(sectorData.data, scanW, scanH, { inversionAttempts: "attemptBoth" });
+                    
+                    if (code) {
+                        const loc = code.location;
+                        loc.topLeftCorner.x += startX; loc.topLeftCorner.y += startY;
+                        loc.topRightCorner.x += startX; loc.topRightCorner.y += startY;
+                        loc.bottomLeftCorner.x += startX; loc.bottomLeftCorner.y += startY;
+                        loc.bottomRightCorner.x += startX; loc.bottomRightCorner.y += startY;
+                        
+                        addCode(code.data, { type: 'poly', points: loc });
+                    }
+                }
+            }
+
+            // --- Finish Rendering ---
+            scanOverlay.style.display = 'none';
+            resultCountText.textContent = `${foundCodes.length} Code${foundCodes.length === 1 ? '' : 's'} Found`;
+
+            if (foundCodes.length > 0) {
+                drawBoundingBoxes(foundCodes, img.width);
+                foundCodes.forEach((c, index) => renderResultCard(c.data, index + 1));
+            } else {
+                renderErrorCard();
+            }
+        }
+
+        // --- 4. Rendering UI ---
+        function drawBoundingBoxes(codes, imgWidth) {
+            ctx.lineWidth = Math.max(3, imgWidth / 300);
+            ctx.strokeStyle = '#10b981'; 
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.2)'; 
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillRect(0,0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+
+            codes.forEach(code => {
+                ctx.beginPath();
+                if (code.loc.type === 'rect') {
+                    ctx.rect(code.loc.box.x, code.loc.box.y, code.loc.box.width, code.loc.box.height);
+                } else if (code.loc.type === 'poly') {
+                    const pts = code.loc.points;
+                    ctx.moveTo(pts.topLeftCorner.x, pts.topLeftCorner.y);
+                    ctx.lineTo(pts.topRightCorner.x, pts.topRightCorner.y);
+                    ctx.lineTo(pts.bottomRightCorner.x, pts.bottomRightCorner.y);
+                    ctx.lineTo(pts.bottomLeftCorner.x, pts.bottomLeftCorner.y);
+                    ctx.closePath();
+                }
+                ctx.fill();
+                ctx.stroke();
+            });
+        }
+
+        function renderResultCard(qrData, index) {
+            const isUrl = qrData.startsWith('http://') || qrData.startsWith('https://');
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            
+            let textHtml = isUrl 
+                ? `<a class="result-text is-link" href="${qrData}" target="_blank" rel="noopener noreferrer">${qrData}</a>`
+                : `<span class="result-text">${qrData}</span>`;
+
+            card.innerHTML = `
+                <div class="result-header">
+                    <span class="result-badge">Result ${index}</span>
+                </div>
+                ${textHtml}
+                <button class="copy-btn">Copy to Clipboard</button>
+            `;
+
+            const copyBtn = card.querySelector('.copy-btn');
+            copyBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(qrData).then(() => {
+                    copyBtn.textContent = 'Copied!';
+                    copyBtn.classList.add('copied');
+                    setTimeout(() => { copyBtn.textContent = 'Copy to Clipboard'; copyBtn.classList.remove('copied'); }, 2000);
+                });
+            });
+
+            resultsContainer.appendChild(card);
+        }
+
+        function renderErrorCard() {
+            const card = document.createElement('div');
+            card.className = 'result-card error';
+            card.innerHTML = `<p>No QR codes found in this image.</p>`;
+            resultsContainer.appendChild(card);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to PDF Converter (with True OCR)</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --bg-panel: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --success: #10b981;
+            --border: #e2e8f0;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+            --shadow-md: 0 8px 16px -4px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+        body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; padding-bottom: 4rem; }
+
+        /* Navbar */
+        .navbar { background: var(--bg-panel); padding: 1rem 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-sm); }
+        .brand { font-size: 1.25rem; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+        .back-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--text-main); text-decoration: none; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border); transition: all 0.2s; }
+        .back-btn:hover { background: #f1f5f9; color: var(--primary); }
+
+        .container { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; }
+
+        /* Upload Zone */
+        #drop-zone {
+            background: var(--bg-panel); border: 2px dashed #94a3b8; border-radius: var(--radius-lg);
+            padding: 3rem 2rem; text-align: center; cursor: pointer; transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm); margin-bottom: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #drop-zone:hover, #drop-zone.dragover { border-color: var(--primary); background: #eef2ff; }
+        #drop-zone i { font-size: 3rem; color: #94a3b8; margin-bottom: 1rem; transition: color 0.3s; }
+        #drop-zone:hover i, #drop-zone.dragover i { color: var(--primary); }
+        #file-input { display: none; }
+
+        /* Controls Area */
+        .controls-panel {
+            background: var(--bg-panel); padding: 1.5rem; border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm); margin-bottom: 2rem; display: flex; flex-wrap: wrap; gap: 1.5rem;
+            align-items: center; justify-content: space-between; border: 1px solid var(--border);
+        }
+        
+        .controls-left { display: flex; flex-wrap: wrap; gap: 2rem; align-items: center; }
+
+        /* Document Settings */
+        .settings-group { display: flex; flex-direction: column; gap: 0.3rem; }
+        .settings-group label { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .form-select { padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border); font-size: 0.95rem; background: #f8fafc; color: var(--text-main); font-weight: 500; cursor: pointer; outline: none; transition: border-color 0.2s; }
+        .form-select:focus { border-color: var(--primary); }
+
+        /* Toggle Switch for OCR */
+        .toggle-wrap { display: flex; align-items: center; gap: 1rem; }
+        .toggle-labels { display: flex; flex-direction: column; justify-content: center; }
+        .toggle-labels strong { font-size: 0.95rem; color: var(--text-main); line-height: 1.2; }
+        .toggle-labels span { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+        
+        .switch { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .btn-group { display: flex; align-items: center; gap: 1rem; }
+        .btn { padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.95rem; }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25); }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); }
+        .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; transform: none; }
+        .btn-danger { background: #fee2e2; color: var(--danger); border: 1px solid #fca5a5; }
+        .btn-danger:hover { background: #fecaca; }
+
+        /* Image Grid (Preview) */
+        .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0 0.5rem; }
+        .preview-header h3 { font-size: 1.1rem; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; }
+        
+        #image-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.5rem;
+            min-height: 200px; padding: 1.5rem; background: #f1f5f9; border-radius: var(--radius-lg); border: 1px dashed var(--border);
+        }
+        
+        /* Individual Image Card */
+        .img-card {
+            background: var(--bg-panel); border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+            overflow: hidden; position: relative; cursor: grab; transition: transform 0.2s, box-shadow 0.2s;
+            display: flex; flex-direction: column; border: 1px solid var(--border);
+        }
+        .img-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+        .img-card:active { cursor: grabbing; }
+        .img-card.sortable-ghost { opacity: 0.4; background: #eef2ff; border: 2px dashed var(--primary); }
+        
+        .img-card-thumb { width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid var(--border); background: #e2e8f0; }
+        .img-card-footer { padding: 0.75rem; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+        .page-num { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); background: #e2e8f0; padding: 0.2rem 0.6rem; border-radius: 12px; }
+        .btn-delete { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 1.2rem; transition: color 0.2s; padding: 0.2rem; display: flex; align-items: center; justify-content: center; }
+        .btn-delete:hover { color: var(--danger-hover); }
+
+        /* Loading Overlay */
+        #loading-overlay {
+            position: fixed; inset: 0; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(5px);
+            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .spinner { border: 4px solid #e2e8f0; border-top: 4px solid var(--primary); border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; margin-bottom: 1.5rem; }
+        .progress-container { width: 80%; max-width: 400px; text-align: center; }
+        .progress-bar-bg { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 1rem 0; }
+        #progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.3s ease; }
+        #loading-title { font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; }
+        #loading-details { font-size: 0.9rem; color: var(--text-muted); font-family: monospace; }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="javascript:void(0)" onclick="window.history.back()" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Back</a>
+        <div class="brand"><i class="fa-solid fa-file-pdf"></i> Image to PDF Studio</div>
+        <div style="width: 80px;"></div>
+    </nav>
+
+    <div class="container">
+        
+        <div id="drop-zone">
+            <i class="fa-solid fa-images"></i>
+            <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--text-main);">Add Images</h3>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">Drag & drop multiple files, click to browse, or paste (Ctrl+V)</p>
+            <input type="file" id="file-input" accept="image/*" multiple>
+        </div>
+
+        <div class="controls-panel">
+            <div class="controls-left">
+                <div class="settings-group">
+                    <label>PDF Page Size</label>
+                    <select id="setting-page-size" class="form-select">
+                        <option value="a4" selected>A4 (Default)</option>
+                        <option value="a3">A3</option>
+                        <option value="a2">A2</option>
+                        <option value="letter">US Letter</option>
+                        <option value="legal">Legal</option>
+                        <option value="fit">✨ Match Image Size (No Borders)</option>
+                    </select>
+                </div>
+
+                <div class="toggle-wrap">
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-ocr">
+                        <span class="slider"></span>
+                    </label>
+                    <div class="toggle-labels">
+                        <strong>Make PDF Searchable (OCR)</strong>
+                        <span>Allows highlighting/copying text from the image.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-danger" onclick="clearAll()" id="btn-clear" style="display: none;">
+                    <i class="fa-solid fa-trash-can"></i> Clear All
+                </button>
+                <button class="btn btn-primary" id="btn-generate" onclick="generatePDF()" disabled>
+                    <i class="fa-solid fa-file-export"></i> Create PDF
+                </button>
+            </div>
+        </div>
+
+        <div class="preview-header">
+            <h3><i class="fa-solid fa-layer-group" style="color: var(--primary);"></i> Pages Preview (Drag to Reorder)</h3>
+            <span id="page-count" style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);">0 Pages</span>
+        </div>
+        
+        <div id="image-grid">
+            <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem 0; font-style: italic;" id="empty-state">
+                No images added yet.
+            </div>
+        </div>
+
+    </div>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="progress-container">
+            <div id="loading-title">Generating PDF...</div>
+            <div class="progress-bar-bg"><div id="progress-bar"></div></div>
+            <div id="loading-details">Initializing engine...</div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let imageFiles = []; 
+        let idCounter = 0;
+
+        // --- DOM Elements ---
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const grid = document.getElementById('image-grid');
+        const emptyState = document.getElementById('empty-state');
+        const btnGenerate = document.getElementById('btn-generate');
+        const btnClear = document.getElementById('btn-clear');
+        const pageCount = document.getElementById('page-count');
+        const toggleOcr = document.getElementById('toggle-ocr');
+        const pageSizeSelector = document.getElementById('setting-page-size');
+        
+        const overlay = document.getElementById('loading-overlay');
+        const progTitle = document.getElementById('loading-title');
+        const progDetails = document.getElementById('loading-details');
+        const progBar = document.getElementById('progress-bar');
+
+        // --- Initialize SortableJS ---
+        const sortable = new Sortable(grid, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: () => {
+                const newOrderIds = Array.from(grid.querySelectorAll('.img-card')).map(card => parseInt(card.dataset.id));
+                const reorderedArray = newOrderIds.map(id => imageFiles.find(img => img.id === id));
+                imageFiles = reorderedArray;
+                updatePageNumbers();
+            }
+        });
+
+        // --- Event Listeners ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+        
+        window.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            const files = [];
+            for (let item of items) { if (item.type.indexOf('image') === 0) files.push(item.getAsFile()); }
+            if (files.length > 0) handleFiles(files);
+        });
+
+        // --- File Handling & UI ---
+        function handleFiles(files) {
+            const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (validFiles.length === 0) return;
+
+            validFiles.forEach(file => {
+                const imgObj = {
+                    id: idCounter++,
+                    file: file,
+                    objectUrl: URL.createObjectURL(file) 
+                };
+                imageFiles.push(imgObj);
+                renderCard(imgObj);
+            });
+
+            updatePageNumbers();
+            updateUI();
+            fileInput.value = ''; 
+        }
+
+        function renderCard(imgObj) {
+            if (emptyState) emptyState.style.display = 'none';
+
+            const card = document.createElement('div');
+            card.className = 'img-card';
+            card.dataset.id = imgObj.id;
+            
+            card.innerHTML = `
+                <img src="${imgObj.objectUrl}" class="img-card-thumb" alt="Preview">
+                <div class="img-card-footer">
+                    <span class="page-num"></span>
+                    <button class="btn-delete" onclick="removeImage(${imgObj.id})" title="Remove Page">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </button>
+                </div>
+            `;
+            grid.appendChild(card);
+        }
+
+        function removeImage(id) {
+            const index = imageFiles.findIndex(img => img.id === id);
+            if (index > -1) {
+                URL.revokeObjectURL(imageFiles[index].objectUrl); 
+                imageFiles.splice(index, 1);
+            }
+            const card = grid.querySelector(`.img-card[data-id="${id}"]`);
+            if (card) card.remove();
+            
+            updateUI();
+            updatePageNumbers();
+        }
+
+        // CONFIRMATION ADDED HERE
+        function clearAll() {
+            if (!confirm("Are you sure you want to clear all images? This action cannot be undone.")) return;
+            
+            imageFiles.forEach(img => URL.revokeObjectURL(img.objectUrl));
+            imageFiles = [];
+            grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem 0; font-style: italic;" id="empty-state">No images added yet.</div>';
+            updateUI();
+        }
+
+        function updateUI() {
+            const count = imageFiles.length;
+            pageCount.textContent = `${count} Page${count !== 1 ? 's' : ''}`;
+            btnGenerate.disabled = count === 0;
+            btnClear.style.display = count > 0 ? 'inline-flex' : 'none';
+            if (count > 0) document.getElementById('empty-state').style.display = 'none';
+        }
+
+        function updatePageNumbers() {
+            const cards = grid.querySelectorAll('.img-card');
+            cards.forEach((card, index) => {
+                const pageBadge = card.querySelector('.page-num');
+                if (pageBadge) pageBadge.textContent = `Page ${index + 1}`;
+            });
+        }
+
+        function fileToDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function getImageDimensions(dataUrl) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve({ w: img.width, h: img.height, img: img });
+                img.src = dataUrl;
+            });
+        }
+
+        // --- Core Application: Dynamic Scaling & OCR ---
+        async function generatePDF() {
+            if (imageFiles.length === 0) return;
+            
+            const doOcr = toggleOcr.checked;
+            const pageSize = pageSizeSelector.value;
+            const isFit = pageSize === 'fit';
+            
+            overlay.style.display = 'flex';
+            progBar.style.width = '0%';
+            progTitle.textContent = doOcr ? 'Generating Searchable PDF...' : 'Generating PDF...';
+            progDetails.textContent = 'Preparing engine...';
+
+            try {
+                const { jsPDF } = window.jspdf;
+                let pdf = null;
+                
+                let worker = null;
+                if (doOcr) {
+                    worker = await Tesseract.createWorker('eng', 1, {
+                        logger: m => {
+                            if (m.status === 'recognizing text') {
+                                progDetails.textContent = `Scanning Page Data: ${Math.round(m.progress * 100)}%`;
+                            }
+                        }
+                    });
+                }
+
+                const totalPages = imageFiles.length;
+                for (let i = 0; i < totalPages; i++) {
+                    const imgObj = imageFiles[i];
+                    
+                    progBar.style.width = `${((i) / totalPages) * 100}%`;
+                    progTitle.textContent = `Processing Page ${i + 1} of ${totalPages}`;
+                    progDetails.textContent = `Converting image format...`;
+
+                    const dataUrl = await fileToDataUrl(imgObj.file);
+                    const { w, h, img } = await getImageDimensions(dataUrl);
+
+                    // Dynamic sizing logic
+                    let orientArg = isFit ? (w > h ? 'l' : 'p') : 'p';
+                    let unitArg = isFit ? 'px' : 'mm'; // Use pixel unit natively if matching size
+                    let formatArg = isFit ? [w, h] : pageSize;
+
+                    if (i === 0) {
+                        pdf = new jsPDF({ orientation: orientArg, unit: unitArg, format: formatArg });
+                    } else {
+                        pdf.addPage(formatArg, orientArg);
+                    }
+
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    
+                    // Ratio calculations
+                    const ratio = isFit ? 1 : Math.min(pdfWidth / w, pdfHeight / h);
+                    const finalW = w * ratio;
+                    const finalH = h * ratio;
+                    const xOffset = isFit ? 0 : (pdfWidth - finalW) / 2;
+                    const yOffset = isFit ? 0 : (pdfHeight - finalH) / 2;
+                    
+                    // Font scaling depends on internal unit system (px vs mm)
+                    // 1px = ~0.75 points. 1mm = ~2.8346 points.
+                    const fontSizeMultiplier = isFit ? 0.75 : 2.8346;
+
+                    // 1. Draw image first
+                    progDetails.textContent = `Adding image to document...`;
+                    pdf.addImage(dataUrl, 'JPEG', xOffset, yOffset, finalW, finalH);
+
+                    // 2. OCR Overlay
+                    if (doOcr) {
+                        progDetails.textContent = `Running OCR Mapping on Page ${i + 1}...`;
+                        const { data } = await worker.recognize(img);
+                        
+                        if (data.words && data.words.length > 0) {
+                            data.words.forEach(word => {
+                                const text = word.text.trim();
+                                if (!text) return;
+                                
+                                const bbox = word.bbox;
+                                const pdfX = xOffset + (bbox.x0 * ratio);
+                                const pdfY = yOffset + (bbox.y1 * ratio); 
+                                
+                                const heightInPdfUnits = (bbox.y1 - bbox.y0) * ratio;
+                                const fontSizePt = heightInPdfUnits * fontSizeMultiplier * 0.9; 
+                                
+                                pdf.setFontSize(Math.max(1, fontSizePt));
+                                
+                                pdf.text(text, pdfX, pdfY, { baseline: "bottom", renderingMode: "invisible" });
+                            });
+                        }
+                    }
+                }
+
+                if (worker) await worker.terminate();
+                
+                progBar.style.width = '100%';
+                progTitle.textContent = 'Saving File...';
+                progDetails.textContent = 'Finishing PDF encoding';
+                
+                pdf.save('Scanned_Document.pdf');
+
+            } catch (err) {
+                console.error(err);
+                alert("An error occurred during generation. Please check the console.");
+            } finally {
+                overlay.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
