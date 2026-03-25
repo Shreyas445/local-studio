@@ -53,7 +53,7 @@ Design custom QR codes for Links, WiFi, Maps, and Emails.
 * Adjust dot and corner styling (Rounded, Classy, Square).
 
 ### 7. 🔍 QR Code Reader (`QRreader.html`)
-Instantly scan and decode QR codes. *(Note: Ensure this file is present in your repo!)*
+Instantly scan and decode QR codes. *(supports multiple qr detection in a single photo!)*
 
 ---
 
