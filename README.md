@@ -63,4 +63,4 @@ Since these tools have **zero backend dependencies**, installation is instant.
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/Shreyas445/local-studio.git](https://github.com/Shreyas445/local-studio.git)
+   git clone https://github.com/Shreyas445/local-studio.git
