@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VaultPro Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+   <link rel="icon" type="image/png" href="icon.png">
+   <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-base: #f1f5f9;
+            --bg-surface: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --success: #10b981;
+            --success-light: #d1fae5;
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
+            --warning: #f59e0b;
+            --warning-light: #fef3c7;
+            --border: #e2e8f0;
+            --radius-sm: 12px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body { background: var(--bg-base); color: var(--text-primary); min-height: 100vh; overflow-x: hidden; font-size: 14px; }
+
+        /* --- Responsive Layout --- */
+        .app-container { width: 100%; max-width: 1200px; margin: 0 auto; min-height: 100vh; position: relative; }
+        
+        .view { position: absolute; top: 0; left: 0; width: 100%; min-height: 100vh; background: var(--bg-base); padding: 24px; padding-bottom: 120px; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 10; display: none; }
+        .view.active { opacity: 1; pointer-events: auto; display: block; }
+
+        @media (min-width: 768px) {
+            body { padding: 40px 20px; }
+            .app-container { min-height: calc(100vh - 80px); background: transparent; }
+            .view { position: relative; min-height: auto; padding: 0; background: transparent; border-radius: 0; }
+            .desktop-grid { display: grid; grid-template-columns: 350px 1fr; gap: 30px; align-items: start; }
+            .desktop-card { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-sm); }
+        }
+
+        /* --- Headers & Navigation --- */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-top: 10px; }
+        .header h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
+        .header-actions { display: flex; gap: 12px; align-items: center; }
+        
+        .icon-btn { background: var(--bg-surface); width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); font-size: 1.1rem; color: var(--text-primary); cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-sm); position: relative; transition: transform 0.2s; }
+        .icon-btn:active { transform: scale(0.9); }
+        .notif-badge { position: absolute; top: 0; right: 0; background: var(--danger); width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--bg-surface); display: none; }
+        .notif-badge.active { display: block; }
+
+        .balance-pill { background: var(--bg-surface); padding: 10px 18px; border-radius: 30px; font-weight: 700; box-shadow: var(--shadow-sm); cursor: pointer; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); transition: transform 0.2s; }
+        .balance-pill:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .balance-pill i { color: var(--accent); }
+
+        /* --- Search Bar --- */
+        .search-box { width: 100%; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-base); outline: none; font-size: 0.9rem; margin-bottom: 16px; transition: border-color 0.2s; }
+        .search-box:focus { border-color: var(--accent); background: #fff; }
+
+        /* --- Dashboard Cards --- */
+        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 30px; }
+        .dash-card { background: var(--bg-surface); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-sm); cursor: pointer; border: 1px solid var(--border); transition: transform 0.2s; }
+        .dash-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+        .dash-card h3 { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+        .dash-card .amount { font-size: 1.4rem; font-weight: 800; }
+        .card-oweme { border-bottom: 4px solid var(--success); }
+        .card-oweme .amount { color: var(--success); }
+        .card-iowe { border-bottom: 4px solid var(--danger); }
+        .card-iowe .amount { color: var(--danger); }
+
+        /* --- Expenses Section & Filters --- */
+        .section-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+        .section-title { font-size: 1.1rem; font-weight: 700; color: var(--text-secondary); }
+        .total-expense-display { font-size: 1.2rem; font-weight: 800; color: var(--text-primary); background: none; padding: 8px 16px; border-radius: 20px;  margin-top: 15px; }
+        
+        .filter-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; scrollbar-width: none; }
+        .filter-scroll::-webkit-scrollbar { display: none; }
+        .filter-btn { padding: 6px 14px; border-radius: 20px; background: var(--bg-surface); border: 1px solid var(--border); font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+        .filter-btn.active { background: var(--text-primary); color: white; border-color: var(--text-primary); }
+
+        .custom-date-row { display: none; gap: 10px; margin-bottom: 20px; background: var(--bg-surface); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+        .custom-date-row.active { display: flex; }
+        .date-input { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 8px; outline: none; }
+
+        /* --- List Elements --- */
+        .list-container { display: flex; flex-direction: column; gap: 12px; }
+        .entry-card { background: var(--bg-surface); border-radius: var(--radius-md); padding: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm); border: 1px solid var(--border); position: relative; overflow: hidden; }
+        .entry-card.settled { opacity: 0.5; background: #f8fafc; }
+        
+        .entry-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 14px; flex-shrink: 0; }
+        .bg-expense { background: var(--bg-base); color: var(--text-primary); }
+        .bg-oweme { background: var(--success-light); color: var(--success); }
+        .bg-iowe { background: var(--danger-light); color: var(--danger); }
+        .bg-sys { background: #e0e7ff; color: var(--accent); }
+        
+        .entry-details { flex: 1; min-width: 0; }
+        /* FIXED: Removed nowrap/overflow logic to allow multi-line text wrapping */
+        .entry-details h4 { font-size: 1rem; margin-bottom: 4px; word-break: break-word; line-height: 1.3; color: var(--text-primary); }
+        .entry-details p { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; word-break: break-word; }
+        
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; background: var(--bg-base); color: var(--text-secondary); }
+        .badge.overdue { background: var(--danger-light); color: var(--danger); animation: pulse 2s infinite; }
+        .badge.warning { background: var(--warning-light); color: var(--warning); }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        .entry-amount { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+        .entry-amount .val { font-weight: 800; font-size: 1.1rem; }
+        
+        .btn-settle { background: var(--text-primary); border: none; padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: white; transition: transform 0.2s; box-shadow: var(--shadow-sm); }
+        .btn-settle:active { transform: scale(0.9); }
+        .settled-text { font-size: 0.8rem; color: var(--success); font-weight: 700; }
+
+        .btn-delete { background: var(--danger-light); border: none; width: 28px; height: 28px; border-radius: 6px; color: var(--danger); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+        .btn-delete:active { transform: scale(0.9); }
+        .btn-delete:hover { background: var(--danger); color: white; }
+
+        /* --- Balance & Budget Limits --- */
+        .balance-hero { text-align: center; padding: 20px 0 30px; display: flex; flex-direction: column; align-items: center; }
+        .balance-hero h2 { font-size: 1rem; color: var(--text-secondary); font-weight: 600; }
+        .balance-hero .big-amount { font-size: 3.2rem; font-weight: 800; margin: 10px 0; color: var(--text-primary); letter-spacing: -1px; }
+        
+        /* Edit Balance Button */
+        .edit-btn { background: var(--bg-surface); border: 1px solid var(--border); padding: 8px 16px; border-radius: 20px; color: var(--text-secondary); font-weight: 600; cursor: pointer; font-size: 0.85rem; box-shadow: var(--shadow-sm); transition: transform 0.2s; margin-top: 5px; }
+        .edit-btn:active { transform: scale(0.95); }
+        .edit-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+        .action-buttons { display: flex; gap: 16px; margin-bottom: 30px; }
+        .btn-action { flex: 1; padding: 16px; border-radius: var(--radius-md); font-weight: 700; font-size: 1rem; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: transform 0.2s; }
+        .btn-action:active { transform: scale(0.95); }
+        .btn-add { background: var(--text-primary); color: white; box-shadow: var(--shadow-md); }
+        .btn-withdraw { background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+
+        .budget-card { background: var(--bg-surface); border-radius: var(--radius-md); padding: 20px; border: 1px solid var(--border); margin-bottom: 30px; }
+        .budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .budget-title { font-weight: 700; font-size: 1rem; }
+        .progress-bar-bg { width: 100%; height: 12px; background: var(--bg-base); border-radius: 10px; overflow: hidden; margin-bottom: 8px; }
+        .progress-bar-fill { height: 100%; background: var(--success); transition: width 0.3s, background 0.3s; }
+        .progress-bar-fill.danger { background: var(--danger); }
+        .budget-stats { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; }
+
+        /* --- Notifications Screen Cards --- */
+        .notif-card { background: var(--bg-surface); border-radius: var(--radius-md); padding: 16px; display: flex; gap: 16px; align-items: center; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+        .notif-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+        /* FIXED: Added word-break for long notifications */
+        .notif-content { flex: 1; font-size: 0.95rem; font-weight: 600; line-height: 1.4; word-break: break-word; }
+
+        /* --- Forms & Modals --- */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+        .form-control { width: 100%; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 1rem; background: var(--bg-base); outline: none; transition: all 0.2s; color: var(--text-primary); }
+        .form-control:focus { border-color: var(--accent); background: white; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); }
+        .btn-submit { width: 100%; padding: 16px; border-radius: var(--radius-sm); background: var(--accent); color: white; font-size: 1.1rem; font-weight: 700; border: none; cursor: pointer; margin-top: 10px; transition: background 0.2s; }
+        .btn-submit:hover { background: var(--accent-hover); }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-overlay.modal-centered { align-items: center; }
+        
+        .bottom-sheet { width: 100%; max-width: 500px; background: var(--bg-surface); padding: 24px; border-radius: 30px 30px 0 0; transform: translateY(100%); transition: transform 0.3s; }
+        .modal-overlay.active .bottom-sheet { transform: translateY(0); }
+        
+        /* Custom Centered Dialog Boxes (Replaces confirm/prompt) */
+        .dialog-box { width: 90%; max-width: 380px; background: var(--bg-surface); padding: 24px; border-radius: var(--radius-lg); transform: scale(0.95); opacity: 0; transition: all 0.3s; box-shadow: var(--shadow-lg); display: flex; flex-direction: column; }
+        .modal-overlay.active .dialog-box { transform: scale(1); opacity: 1; }
+        .dialog-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+        .btn-dialog { padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; font-size: 0.9rem; }
+        .btn-cancel { background: var(--bg-base); color: var(--text-secondary); }
+        .btn-cancel:hover { background: #e2e8f0; }
+        .btn-confirm-danger { background: var(--danger); color: white; }
+        .btn-confirm-danger:hover { background: #dc2626; }
+        .btn-confirm-accent { background: var(--accent); color: white; }
+        .btn-confirm-accent:hover { background: var(--accent-hover); }
+
+        @media (min-width: 768px) {
+            .modal-overlay { align-items: center; }
+            .bottom-sheet { border-radius: var(--radius-lg); transform: scale(0.95); opacity: 0; }
+            .modal-overlay.active .bottom-sheet { transform: scale(1); opacity: 1; }
+        }
+
+        /* --- FAB Menu --- */
+        .fab-container { position: fixed; bottom: 30px; right: 24px; z-index: 100; display: flex; flex-direction: column; align-items: flex-end; gap: 16px; }
+        .fab-menu { display: flex; flex-direction: column; gap: 12px; opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.3s; }
+        .fab-menu.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .fab-item { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .fab-label { background: var(--bg-surface); padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; box-shadow: 5px 2px 40px rgba(0, 0, 0, 0.67); border: 1px solid var(--border); }
+        .fab-btn { width: 48px; height: 48px; border-radius: 50%; border: none; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; box-shadow: 5px 2px 40px rgba(0, 0, 0, 0.67); cursor: pointer; transition: transform 0.2s; }
+        .fab-main { width: 60px; height: 60px; border-radius: 50%; background: var(--text-primary); color: white; font-size: 1.5rem; border: none; box-shadow: var(--shadow-lg); cursor: pointer; transition: transform 0.3s; }
+        .fab-main.active { transform: rotate(45deg); background: var(--danger); }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+
+    <div id="view-home" class="view active">
+        <div class="header">
+            <h1>VaultPro</h1>
+            <div class="header-actions">
+                <div style="background: transparent; box-shadow: none; border: none;" class="icon-btn" onclick="switchView('settlements')" title="Mutual Settlements">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div style="background: none;" class="icon-btn" onclick="switchView('notifications')">
+                    <i class="fa-solid fa-bell"></i>
+                    <div class="notif-badge" id="notif-dot"></div>
+                </div>
+                <div class="balance-pill" onclick="switchView('balance')">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span id="home-balance">₹0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="desktop-grid">
+            <div class="desktop-card">
+                <div class="dash-grid" style="margin-bottom: 0;">
+                    <div class="dash-card card-oweme" onclick="openDetails('oweme')">
+                        <h3>Owed to Me</h3>
+                        <div class="amount" id="home-oweme">₹0.00</div>
+                    </div>
+                    <div class="dash-card card-iowe" onclick="openDetails('iowe')">
+                        <h3>I Owe</h3>
+                        <div class="amount" id="home-iowe">₹0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="desktop-card">
+                <div class="section-header">
+                    <div class="section-title">Expenses</div>
+                    <div class="total-expense-display" id="total-filtered-expense">₹0.00</div>
+                </div>
+
+                <input type="text" id="search-expenses" class="search-box" placeholder="Search expenses by title..." onkeyup="renderApp()">
+
+                <div class="filter-scroll">
+                    <button class="filter-btn active" onclick="setFilter('all', this)">All Time</button>
+                    <button class="filter-btn" onclick="setFilter('today', this)">Today</button>
+                    <button class="filter-btn" onclick="setFilter('week', this)">This Week</button>
+                    <button class="filter-btn" onclick="setFilter('month', this)">This Month</button>
+                    <button class="filter-btn" onclick="setFilter('custom', this)">Custom</button>
+                </div>
+
+                <div class="custom-date-row" id="custom-date-row">
+                    <input type="date" id="filter-start" class="date-input" onchange="applyCustomFilter()">
+                    <input type="date" id="filter-end" class="date-input" onchange="applyCustomFilter()">
+                </div>
+
+                <div class="list-container" id="list-home-expenses">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-settlements" class="view">
+        <div class="header">
+            <button class="icon-btn" onclick="switchView('home')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h1>Settle Up</h1>
+            <div style="width: 44px;"></div>
+        </div>
+        <div class="desktop-card" style="max-width: 600px; margin: 0 auto;">
+            <input type="text" id="search-person" class="search-box" placeholder="Search by person's name..." onkeyup="renderSettlements()">
+            <div class="list-container" id="list-settlements"></div>
+        </div>
+    </div>
+
+    <div id="view-notifications" class="view">
+        <div class="header">
+            <button class="icon-btn" onclick="switchView('home')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h1>Alerts & Reminders</h1>
+            <div style="width: 44px;"></div>
+        </div>
+        <div class="desktop-card" style="max-width: 600px; margin: 0 auto;">
+            <div class="list-container" id="notif-list-full">
+                </div>
+        </div>
+    </div>
+
+    <div id="view-balance" class="view">
+        <div class="header">
+            <button class="icon-btn" onclick="switchView('home')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h1>Wallet & Budget</h1>
+            <div style="width: 44px;"></div>
+        </div>
+
+        <div class="desktop-grid">
+            <div class="desktop-card">
+                <div class="balance-hero">
+                    <h2>Available Funds</h2>
+                    <div class="big-amount" id="bal-big">₹0.00</div>
+                    <button class="edit-btn" onclick="manualEditBalance()">
+                        <i class="fa-solid fa-pen" style="margin-right: 4px;"></i> Edit Manually
+                    </button>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-action btn-add" onclick="openBalanceModal('add')"><i class="fa-solid fa-arrow-down"></i> Deposit</button>
+                    <button class="btn-action btn-withdraw" onclick="openBalanceModal('withdraw')"><i class="fa-solid fa-arrow-up"></i> Withdraw</button>
+                </div>
+
+                <div class="budget-card">
+                    <div class="budget-header">
+                        <span class="budget-title">Expense Limiter</span>
+                        <button onclick="openBudgetModal()" style="background:none; border:none; color:var(--accent); font-weight:600; cursor:pointer;">Set Limit</button>
+                    </div>
+                    <div id="budget-ui">
+                        </div>
+                </div>
+            </div>
+
+            <div class="desktop-card">
+                <h2 class="section-title">Transaction History</h2>
+                <div class="list-container" id="list-transactions"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-details" class="view">
+        <div class="header">
+            <button class="icon-btn" onclick="switchView('home')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h1 id="details-title">Details</h1>
+            <div style="width: 44px;"></div>
+        </div>
+        <div class="desktop-card">
+            <input type="text" id="search-details" class="search-box" placeholder="Search records..." onkeyup="renderDetails()">
+            <div class="list-container" id="list-details"></div>
+        </div>
+    </div>
+
+    <div id="view-form" class="view">
+        <div class="header">
+            <button class="icon-btn" onclick="switchView('home')"><i class="fa-solid fa-xmark"></i></button>
+            <h1 id="form-title">New Entry</h1>
+            <div style="width: 44px;"></div>
+        </div>
+        
+        <div class="desktop-card" style="max-width: 600px; margin: 0 auto;">
+            <form id="entry-form" onsubmit="handleFormSubmit(event)">
+                <input type="hidden" id="f-type">
+                <div class="form-group">
+                    <label>Amount (₹)</label>
+                    <input type="number" id="f-amount" class="form-control" style="font-size: 2rem; font-weight: 800; color: var(--accent);" placeholder="0.00" required step="any" min="1">
+                </div>
+                <div class="form-group" id="fg-title">
+                    <label>Title / Description</label>
+                    <input type="text" id="f-title" class="form-control" placeholder="e.g. Dinner, Rent" required>
+                </div>
+                <div class="form-group" id="fg-person" style="display: none;">
+                    <label>Person's Name</label>
+                    <input type="text" id="f-person" class="form-control" placeholder="Enter exact name to track mutual debts">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Record Date</label>
+                        <input type="date" id="f-date" class="form-control" required>
+                    </div>
+                    <div class="form-group" id="fg-due-date" style="display: none;">
+                        <label>Due Date (Optional)</label>
+                        <input type="date" id="f-due-date" class="form-control">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit">Save Entry</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="fab-container" id="fab-container">
+        <div class="fab-menu" id="fab-menu">
+            <div class="fab-item" onclick="openForm('iowe')">
+                <span class="fab-label">Money I Owe</span>
+                <button class="fab-btn bg-iowe"><i class="fa-solid fa-hand-holding-dollar"></i></button>
+            </div>
+            <div class="fab-item" onclick="openForm('oweme')">
+                <span class="fab-label">Money Owed To Me</span>
+                <button class="fab-btn bg-oweme"><i class="fa-solid fa-sack-dollar"></i></button>
+            </div>
+            <div class="fab-item" onclick="openForm('expense')">
+                <span class="fab-label">General Expense</span>
+                <button class="fab-btn bg-expense"><i class="fa-solid fa-receipt"></i></button>
+            </div>
+        </div>
+        <button class="fab-main" id="fab-main" onclick="toggleFab()"><i class="fa-solid fa-plus"></i></button>
+    </div>
+
+    <div class="modal-overlay" id="bal-modal">
+        <div class="bottom-sheet">
+            <div class="header" style="margin-bottom: 20px;">
+                <h2 id="bal-modal-title">Add Money</h2>
+                <button class="icon-btn" onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="bal-form" onsubmit="handleBalanceSubmit(event)">
+                <input type="hidden" id="b-type">
+                <div class="form-group">
+                    <label>Amount (₹)</label>
+                    <input type="number" id="b-amount" class="form-control" style="font-size: 1.5rem; font-weight: 700;" required step="any" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Note (Optional)</label>
+                    <input type="text" id="b-note" class="form-control" placeholder="e.g. Salary, ATM Withdrawal">
+                </div>
+                <button type="submit" class="btn-submit">Confirm</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="budget-modal">
+        <div class="bottom-sheet">
+            <div class="header" style="margin-bottom: 20px;">
+                <h2>Set Expense Limit</h2>
+                <button class="icon-btn" onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleBudgetSubmit(event)">
+                <div class="form-group">
+                    <label>Limit Amount (₹)</label>
+                    <input type="number" id="bdg-amount" class="form-control" required min="1">
+                </div>
+                <div class="form-group">
+                    <label>Time Period</label>
+                    <select id="bdg-period" class="form-control" required>
+                        <option value="day">Per Day</option>
+                        <option value="week">Per Week</option>
+                        <option value="month">Per Month</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit">Save Budget</button>
+                <button type="button" onclick="clearBudget()" class="btn-submit" style="background:var(--bg-base); color:var(--danger); border:1px solid var(--danger); margin-top:10px; box-shadow:none;">Remove Limit</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay modal-centered" id="delete-modal">
+        <div class="dialog-box">
+            <h3 style="margin-bottom: 10px; font-size: 1.2rem; color: var(--text-primary);">Delete Entry</h3>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.4;">Are you sure you want to delete this entry? This will permanently remove it and reverse its effect on your wallet.</p>
+            <div class="dialog-actions">
+                <button class="btn-dialog btn-cancel" onclick="closeModals()">Cancel</button>
+                <button class="btn-dialog btn-confirm-danger" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay modal-centered" id="edit-balance-modal">
+        <div class="dialog-box">
+            <h3 style="margin-bottom: 12px; font-size: 1.2rem; color: var(--text-primary);">Edit Wallet Balance</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px; line-height: 1.4;">Enter your exact new Total Balance. This will override your current funds.</p>
+            <form onsubmit="event.preventDefault(); confirmManualEdit();">
+                <input type="number" id="manual-balance-input" class="form-control" style="font-size: 1.5rem; font-weight: 700; color: var(--accent);" step="any" required>
+                <div class="dialog-actions">
+                    <button type="button" class="btn-dialog btn-cancel" onclick="closeModals()">Cancel</button>
+                    <button type="submit" class="btn-dialog btn-confirm-accent">Save Balance</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay modal-centered" id="settle-person-modal">
+        <div class="dialog-box">
+            <h3 style="margin-bottom: 10px; font-size: 1.2rem; color: var(--text-primary);">Settle All Debts</h3>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.4;">Are you sure you want to mark all mutual balances with <strong id="settle-modal-name" style="color: var(--text-primary);"></strong> as settled? This will update your wallet balance.</p>
+            <div class="dialog-actions">
+                <button class="btn-dialog btn-cancel" onclick="closeModals()">Cancel</button>
+                <button class="btn-dialog btn-confirm-accent" onclick="confirmSettlePerson()">Confirm Settle</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    /* =========================================
+       STATE MANAGEMENT & ENGINE
+       ========================================= */
+    let data = JSON.parse(localStorage.getItem('vaultProData_v4')) || {
+        totalBalance: 0,
+        transactions: [], 
+        entries: [],
+        budget: { limit: null, period: 'month' }
+    };
+
+    let activeExpenseFilter = 'all';
+    let currentDetailType = '';
+
+    // Variables to hold temp data for custom popups
+    let pendingDeleteId = null;
+    let pendingSettleName = null;
+
+    function saveData() {
+        localStorage.setItem('vaultProData_v4', JSON.stringify(data));
+        renderApp();
+    }
+
+    function formatCurrency(num) {
+        return '₹' + parseFloat(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    /* =========================================
+       LOGIC: CASH FLOW & SETTLEMENTS
+       ========================================= */
+    function addBalanceTransaction(type, amount, note) {
+        data.transactions.unshift({
+            id: Date.now().toString(),
+            type: type, 
+            amount: parseFloat(amount),
+            note: note,
+            date: new Date().toISOString()
+        });
+        
+        if (type === 'add') data.totalBalance += parseFloat(amount);
+        if (type === 'withdraw' || type === 'expense') data.totalBalance -= parseFloat(amount);
+        
+        if (type === 'manual_set') data.totalBalance = parseFloat(amount);
+    }
+
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        const type = document.getElementById('f-type').value;
+        const amount = parseFloat(document.getElementById('f-amount').value);
+        const title = document.getElementById('f-title').value;
+        let person = document.getElementById('f-person').value.trim();
+        
+        if(person) person = person.charAt(0).toUpperCase() + person.slice(1).toLowerCase();
+
+        const date = document.getElementById('f-date').value;
+        const dueDate = document.getElementById('f-due-date').value;
+
+        if (type === 'expense') {
+            addBalanceTransaction('expense', amount, `Expense: ${title}`);
+        } else if (type === 'oweme') {
+            addBalanceTransaction('withdraw', amount, `Lent to: ${person} (${title})`);
+        } else if (type === 'iowe') {
+            addBalanceTransaction('add', amount, `Borrowed from: ${person} (${title})`);
+        }
+
+        data.entries.unshift({
+            id: Date.now().toString(),
+            type, amount, title, person, date, dueDate, settled: false
+        });
+
+        saveData();
+        switchView('home');
+        document.getElementById('entry-form').reset();
+    }
+
+    function settleEntry(id) {
+        const entry = data.entries.find(e => e.id === id);
+        if(!entry || entry.settled) return;
+
+        entry.settled = true;
+        
+        if (entry.type === 'oweme') {
+            addBalanceTransaction('add', entry.amount, `Settled: ${entry.person} paid you back`);
+        } else if (entry.type === 'iowe') {
+            addBalanceTransaction('withdraw', entry.amount, `Settled: You paid ${entry.person} back`);
+        }
+        
+        saveData();
+        
+        if (document.getElementById('view-details').classList.contains('active')) {
+            renderDetails();
+        }
+        if (document.getElementById('view-settlements').classList.contains('active')) {
+            renderSettlements();
+        }
+    }
+
+    /* --- NEW: CUSTOM POPUP DELETE ENTRY LOGIC --- */
+    function deleteEntry(id) {
+        pendingDeleteId = id;
+        document.getElementById('delete-modal').classList.add('active');
+    }
+
+    function confirmDelete() {
+        if (!pendingDeleteId) return;
+        const entryIndex = data.entries.findIndex(e => e.id === pendingDeleteId);
+        
+        if (entryIndex !== -1) {
+            const entry = data.entries[entryIndex];
+            
+            // Reverse the balance effect if the transaction was never settled
+            if (!entry.settled) {
+                if (entry.type === 'expense' || entry.type === 'oweme') {
+                    addBalanceTransaction('add', entry.amount, `Reversed: Deleted ${entry.title}`);
+                } else if (entry.type === 'iowe') {
+                    addBalanceTransaction('withdraw', entry.amount, `Reversed: Deleted ${entry.title}`);
+                }
+            }
+
+            data.entries.splice(entryIndex, 1);
+            saveData();
+            
+            if (document.getElementById('view-details').classList.contains('active')) renderDetails();
+            if (document.getElementById('view-settlements').classList.contains('active')) renderSettlements();
+        }
+        closeModals();
+        pendingDeleteId = null;
+    }
+
+    /* --- MUTUAL SETTLEMENT ENGINE --- */
+    function renderSettlements() {
+        const searchTerm = document.getElementById('search-person').value.toLowerCase();
+        const people = {};
+
+        data.entries.forEach(e => {
+            if (!e.settled && e.type !== 'expense') {
+                const name = e.person || 'Unknown';
+                if (!people[name]) people[name] = { iowe: 0, oweme: 0 };
+                if (e.type === 'iowe') people[name].iowe += e.amount;
+                if (e.type === 'oweme') people[name].oweme += e.amount;
+            }
+        });
+
+        let html = '';
+        for (const [name, stats] of Object.entries(people)) {
+            if (searchTerm && !name.toLowerCase().includes(searchTerm)) continue;
+
+            const net = stats.oweme - stats.iowe;
+            let statusText = '';
+            let colorClass = '';
+
+            if (net > 0) {
+                statusText = `${name} owes you`;
+                colorClass = 'var(--success)';
+            } else if (net < 0) {
+                statusText = `You owe ${name}`;
+                colorClass = 'var(--danger)';
+            } else {
+                statusText = `Balances are offset (Even)`;
+                colorClass = 'var(--text-primary)';
+            }
+
+            html += `
+                <div class="entry-card">
+                    <div class="entry-icon" style="background:var(--bg-base); color:${colorClass};">
+                        <i class="fa-solid fa-user-group"></i>
+                    </div>
+                    <div class="entry-details">
+                        <h4 style="font-size: 1.1rem;">${name}</h4>
+                        <p style="color: ${colorClass}; font-weight: 600; margin-bottom: 2px;">${statusText}</p>
+                        <p style="font-size: 0.7rem;">Owed to you: ${formatCurrency(stats.oweme)} | You Owe: ${formatCurrency(stats.iowe)}</p>
+                    </div>
+                    <div class="entry-amount">
+                        <div class="val" style="color: ${colorClass};">${formatCurrency(Math.abs(net))}</div>
+                        <button class="btn-settle" onclick="settlePerson('${name}')" style="background:${net===0?'var(--text-secondary)':'var(--text-primary)'}">Settle All</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        document.getElementById('list-settlements').innerHTML = html || '<p style="text-align:center; padding: 20px; color:var(--text-secondary);">You are all settled up with everyone!</p>';
+    }
+
+    /* --- NEW: CUSTOM POPUP SETTLE ALL LOGIC --- */
+    function settlePerson(name) {
+        pendingSettleName = name;
+        document.getElementById('settle-modal-name').innerText = name;
+        document.getElementById('settle-person-modal').classList.add('active');
+    }
+
+    function confirmSettlePerson() {
+        if (!pendingSettleName) return;
+        data.entries.forEach(e => {
+            if (!e.settled && e.type !== 'expense' && e.person === pendingSettleName) {
+                settleEntry(e.id);
+            }
+        });
+        renderSettlements();
+        closeModals();
+        pendingSettleName = null;
+    }
+
+    /* =========================================
+       EXPENSE FILTERING
+       ========================================= */
+    function setFilter(filterType, btnElement) {
+        activeExpenseFilter = filterType;
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        if(btnElement) btnElement.classList.add('active');
+        
+        const customRow = document.getElementById('custom-date-row');
+        customRow.classList.toggle('active', filterType === 'custom');
+        
+        if(filterType !== 'custom') renderApp();
+    }
+
+    function applyCustomFilter() {
+        renderApp();
+    }
+
+    function getFilteredExpenses() {
+        const searchTerm = (document.getElementById('search-expenses')?.value || '').toLowerCase();
+        const expenses = data.entries.filter(e => e.type === 'expense');
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        return expenses.filter(e => {
+            const expDate = new Date(e.date);
+            expDate.setHours(0,0,0,0);
+            
+            if (searchTerm && !e.title.toLowerCase().includes(searchTerm)) {
+                return false;
+            }
+
+            if (activeExpenseFilter === 'today') {
+                return expDate.getTime() === today.getTime();
+            } else if (activeExpenseFilter === 'week') {
+                const startOfWeek = new Date(today);
+                startOfWeek.setDate(today.getDate() - today.getDay());
+                return expDate >= startOfWeek;
+            } else if (activeExpenseFilter === 'month') {
+                return expDate.getMonth() === today.getMonth() && expDate.getFullYear() === today.getFullYear();
+            } else if (activeExpenseFilter === 'custom') {
+                const start = document.getElementById('filter-start').value;
+                const end = document.getElementById('filter-end').value;
+                if(!start || !end) return true;
+                return expDate >= new Date(start) && expDate <= new Date(end);
+            }
+            return true;
+        });
+    }
+
+    /* =========================================
+       BUDGET LOGIC
+       ========================================= */
+    function openBudgetModal() {
+        document.getElementById('budget-modal').classList.add('active');
+        if(data.budget.limit) {
+            document.getElementById('bdg-amount').value = data.budget.limit;
+            document.getElementById('bdg-period').value = data.budget.period;
+        }
+    }
+    
+    function handleBudgetSubmit(e) {
+        e.preventDefault();
+        data.budget.limit = parseFloat(document.getElementById('bdg-amount').value);
+        data.budget.period = document.getElementById('bdg-period').value;
+        saveData();
+        closeModals();
+    }
+
+    function clearBudget() {
+        data.budget.limit = null;
+        saveData();
+        closeModals();
+    }
+
+    function calculateBudgetSpent() {
+        if (!data.budget.limit) return 0;
+        
+        const today = new Date();
+        const expenses = data.entries.filter(e => e.type === 'expense');
+        
+        let spent = 0;
+        expenses.forEach(e => {
+            const d = new Date(e.date);
+            let inPeriod = false;
+            if (data.budget.period === 'day' && d.toDateString() === today.toDateString()) inPeriod = true;
+            if (data.budget.period === 'month' && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()) inPeriod = true;
+            if (data.budget.period === 'week') {
+                const startOfWeek = new Date(today);
+                startOfWeek.setDate(today.getDate() - today.getDay());
+                if(d >= startOfWeek) inPeriod = true;
+            }
+            if(inPeriod) spent += e.amount;
+        });
+        return spent;
+    }
+
+    /* =========================================
+       NOTIFICATIONS LOGIC
+       ========================================= */
+    function checkNotifications() {
+        const notifs = [];
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        data.entries.forEach(e => {
+            if (e.dueDate && !e.settled && e.type !== 'expense') {
+                const due = new Date(e.dueDate);
+                due.setHours(0,0,0,0);
+                const typeText = e.type === 'oweme' ? 'to receive from' : 'to pay';
+                
+                if (due.getTime() < today.getTime()) {
+                    notifs.push(`
+                        <div class="notif-card">
+                            <div class="notif-icon bg-iowe" style="background:var(--danger-light); color:var(--danger);"><i class="fa-solid fa-circle-exclamation"></i></div>
+                            <div class="notif-content" style="color:var(--danger);">Overdue: You need ${typeText} ${e.person} (${formatCurrency(e.amount)})</div>
+                        </div>`);
+                } else if (due.getTime() === today.getTime()) {
+                    notifs.push(`
+                        <div class="notif-card">
+                            <div class="notif-icon bg-iowe" style="background:var(--warning-light); color:var(--warning);"><i class="fa-solid fa-clock"></i></div>
+                            <div class="notif-content" style="color:var(--warning);">Due Today: You need ${typeText} ${e.person} (${formatCurrency(e.amount)})</div>
+                        </div>`);
+                }
+            }
+        });
+
+        if (data.budget.limit) {
+            const spent = calculateBudgetSpent();
+            const percent = (spent / data.budget.limit) * 100;
+            if (percent >= 100) {
+                notifs.push(`
+                    <div class="notif-card">
+                        <div class="notif-icon" style="background:var(--danger-light); color:var(--danger);"><i class="fa-solid fa-ban"></i></div>
+                        <div class="notif-content" style="color:var(--danger);">Budget Limit Reached! You spent ${formatCurrency(spent)}.</div>
+                    </div>`);
+            } else if (percent >= 80) {
+                notifs.push(`
+                    <div class="notif-card">
+                        <div class="notif-icon" style="background:var(--warning-light); color:var(--warning);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="notif-content" style="color:var(--warning);">Nearing Budget Limit (${Math.round(percent)}% spent).</div>
+                    </div>`);
+            }
+        }
+
+        const dot = document.getElementById('notif-dot');
+        const listFull = document.getElementById('notif-list-full');
+        
+        if (notifs.length > 0) {
+            dot.classList.add('active');
+            listFull.innerHTML = notifs.join('');
+        } else {
+            dot.classList.remove('active');
+            listFull.innerHTML = `
+                <div style="text-align:center; padding: 60px 20px; color: var(--text-secondary);">
+                    <i class="fa-solid fa-bell-slash" style="font-size:3rem; margin-bottom:15px; opacity:0.2;"></i>
+                    <p style="font-size:1.1rem; font-weight:600;">You are all caught up!</p>
+                    <p style="font-size:0.9rem;">No alerts or reminders right now.</p>
+                </div>`;
+        }
+    }
+
+    /* =========================================
+       UI ROUTER & INTERACTIONS (Hash Based Navigation)
+       ========================================= */
+    window.addEventListener('hashchange', () => {
+        let viewId = window.location.hash.replace('#', '');
+        if (!viewId) viewId = 'home';
+        
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        let targetView = document.getElementById('view-' + viewId);
+        
+        if (!targetView) {
+            targetView = document.getElementById('view-home');
+            viewId = 'home';
+        }
+        targetView.classList.add('active');
+        
+        document.getElementById('fab-container').style.display = (viewId === 'home') ? 'flex' : 'none';
+        
+        if(viewId === 'home') closeFab();
+        if(viewId === 'settlements') {
+            document.getElementById('search-person').value = '';
+            renderSettlements();
+        }
+        
+        closeModals();
+        window.scrollTo(0,0);
+        renderApp();
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+        if (!window.location.hash) {
+            window.location.replace('#home');
+        } else {
+            window.dispatchEvent(new Event('hashchange'));
+        }
+    });
+
+    function switchView(viewId) {
+        if (viewId === 'home') {
+            window.location.replace('#home');
+        } else {
+            window.location.hash = viewId;
+        }
+    }
+
+    /* =========================================
+       FAB & UI UTILS 
+       ========================================= */
+    function toggleFab() {
+        document.getElementById('fab-menu').classList.toggle('open');
+        document.getElementById('fab-main').classList.toggle('active');
+    }
+    function closeFab() {
+        document.getElementById('fab-menu').classList.remove('open');
+        document.getElementById('fab-main').classList.remove('active');
+    }
+
+    function closeModals() {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+    }
+
+    function openForm(type) {
+        closeFab();
+        document.getElementById('f-type').value = type;
+        document.getElementById('f-date').valueAsDate = new Date();
+        document.getElementById('f-due-date').value = '';
+        
+        const titleMap = { 'expense': 'New Expense', 'iowe': 'I Owe Someone', 'oweme': 'Someone Owes Me' };
+        document.getElementById('form-title').innerText = titleMap[type];
+        
+        const isDebt = (type !== 'expense');
+        document.getElementById('fg-person').style.display = isDebt ? 'block' : 'none';
+        document.getElementById('f-person').required = isDebt;
+        document.getElementById('fg-due-date').style.display = isDebt ? 'block' : 'none';
+        
+        switchView('form');
+    }
+
+    function openDetails(type) {
+        currentDetailType = type;
+        document.getElementById('details-title').innerText = type === 'iowe' ? 'Money I Owe' : 'Owed To Me';
+        if(document.getElementById('search-details')) document.getElementById('search-details').value = '';
+        renderDetails();
+        switchView('details');
+    }
+
+    function renderDetails() {
+        const searchTerm = (document.getElementById('search-details')?.value || '').toLowerCase();
+        let html = '';
+        const sorted = data.entries.filter(e => e.type === currentDetailType).sort((a,b) => a.settled - b.settled || new Date(b.date) - new Date(a.date));
+        
+        const filtered = sorted.filter(e => {
+            if(!searchTerm) return true;
+            return e.title.toLowerCase().includes(searchTerm) || (e.person && e.person.toLowerCase().includes(searchTerm));
+        });
+
+        filtered.forEach(entry => { html += generateEntryCard(entry); });
+        document.getElementById('list-details').innerHTML = html || '<p style="text-align:center; color:var(--text-secondary); margin-top: 20px;">No records found.</p>';
+    }
+
+    function openBalanceModal(type) {
+        document.getElementById('bal-modal').classList.add('active');
+        document.getElementById('b-type').value = type;
+        document.getElementById('bal-modal-title').innerText = type === 'add' ? 'Deposit Money' : 'Withdraw Money';
+        document.getElementById('bal-form').reset();
+    }
+
+    function handleBalanceSubmit(e) {
+        e.preventDefault();
+        const type = document.getElementById('b-type').value;
+        const amt = document.getElementById('b-amount').value;
+        const note = document.getElementById('b-note').value || (type === 'add' ? 'Manual Deposit' : 'Manual Withdrawal');
+        
+        addBalanceTransaction(type, amt, note);
+        saveData();
+        closeModals();
+    }
+
+    /* --- NEW: CUSTOM POPUP MANUAL EDIT LOGIC --- */
+    function manualEditBalance() {
+        document.getElementById('manual-balance-input').value = data.totalBalance;
+        document.getElementById('edit-balance-modal').classList.add('active');
+    }
+
+    function confirmManualEdit() {
+        const val = document.getElementById('manual-balance-input').value;
+        if (val !== null && val.trim() !== '') {
+            addBalanceTransaction('manual_set', parseFloat(val), 'Manual Balance Correction');
+            saveData();
+        }
+        closeModals();
+    }
+
+
+    /* =========================================
+       RENDERING ENGINE
+       ========================================= */
+    function generateEntryCard(entry) {
+        let iconHtml = '';
+        if(entry.type === 'expense') iconHtml = '<div class="entry-icon bg-expense"><i class="fa-solid fa-receipt"></i></div>';
+        if(entry.type === 'oweme') iconHtml = '<div class="entry-icon bg-oweme"><i class="fa-solid fa-arrow-down"></i></div>';
+        if(entry.type === 'iowe') iconHtml = '<div class="entry-icon bg-iowe"><i class="fa-solid fa-arrow-up"></i></div>';
+
+        const dateStr = new Date(entry.date).toLocaleDateString([], {month: 'short', day: 'numeric'});
+        
+        let dueBadge = '';
+        if (entry.dueDate && !entry.settled && entry.type !== 'expense') {
+            const dueStr = new Date(entry.dueDate).toLocaleDateString([], {month: 'short', day: 'numeric'});
+            const today = new Date(); today.setHours(0,0,0,0);
+            const due = new Date(entry.dueDate); due.setHours(0,0,0,0);
+            
+            if (due < today) dueBadge = `<span class="badge overdue"><i class="fa-solid fa-circle-exclamation"></i> Overdue (${dueStr})</span>`;
+            else if (due.getTime() === today.getTime()) dueBadge = `<span class="badge warning"><i class="fa-solid fa-clock"></i> Due Today</span>`;
+            else dueBadge = `<span class="badge"><i class="fa-regular fa-calendar"></i> Due: ${dueStr}</span>`;
+        }
+
+        const personTag = entry.person ? `<p><i class="fa-regular fa-user" style="margin-right:4px;"></i>${entry.person} • ${dateStr}</p>` : `<p>${dateStr}</p>`;
+        
+        let actionBtn = '';
+        if (entry.type !== 'expense') {
+            if (entry.settled) actionBtn = `<span class="settled-text"><i class="fa-solid fa-check-double"></i> Settled</span>`;
+            else actionBtn = `<button class="btn-settle" onclick="settleEntry('${entry.id}')">Settle</button>`;
+        }
+
+        return `
+            <div class="entry-card ${entry.settled ? 'settled' : ''}">
+                ${iconHtml}
+                <div class="entry-details">
+                    <h4>${entry.title}</h4>
+                    ${personTag}
+                    ${dueBadge}
+                </div>
+                <div class="entry-amount">
+                    <div class="val">${formatCurrency(entry.amount)}</div>
+                    <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
+                        ${actionBtn}
+                        <button class="btn-delete" onclick="deleteEntry('${entry.id}')" title="Delete Entry"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderApp() {
+        checkNotifications();
+
+        let oweMeTotal = 0; let iOweTotal = 0;
+        data.entries.forEach(e => {
+            if (!e.settled) {
+                if (e.type === 'oweme') oweMeTotal += e.amount;
+                if (e.type === 'iowe') iOweTotal += e.amount;
+            }
+        });
+
+        const balText = formatCurrency(data.totalBalance);
+        document.getElementById('home-balance').innerText = balText;
+        document.getElementById('bal-big').innerText = balText;
+        document.getElementById('home-oweme').innerText = formatCurrency(oweMeTotal);
+        document.getElementById('home-iowe').innerText = formatCurrency(iOweTotal);
+
+        const filteredExpenses = getFilteredExpenses();
+        const totalExp = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+        document.getElementById('total-filtered-expense').innerText = formatCurrency(totalExp);
+        
+        const expensesHtml = filteredExpenses.map(generateEntryCard).join('');
+        document.getElementById('list-home-expenses').innerHTML = expensesHtml || '<div style="text-align:center; padding: 30px; color: var(--text-secondary); background: var(--bg-surface); border-radius: var(--radius-md);"><p>No expenses found for this filter.</p></div>';
+
+        const budgetUI = document.getElementById('budget-ui');
+        if (data.budget.limit) {
+            const spent = calculateBudgetSpent();
+            const percent = Math.min((spent / data.budget.limit) * 100, 100);
+            const isDanger = percent >= 100;
+            budgetUI.innerHTML = `
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill ${isDanger ? 'danger' : ''}" style="width: ${percent}%"></div>
+                </div>
+                <div class="budget-stats">
+                    <span>Spent: ${formatCurrency(spent)}</span>
+                    <span>Limit: ${formatCurrency(data.budget.limit)} / ${data.budget.period}</span>
+                </div>
+            `;
+        } else {
+            budgetUI.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-secondary);">No active budget limit.</p>`;
+        }
+
+        let transHtml = '';
+        data.transactions.forEach(t => {
+            const isPositive = (t.type === 'add' || t.type === 'manual_set');
+            const sign = t.type === 'manual_set' ? '=' : (isPositive ? '+' : '-');
+            const colorClass = isPositive ? 'bg-oweme' : (t.type === 'manual_set' ? 'bg-sys' : 'bg-expense');
+            const icon = t.type === 'manual_set' ? 'fa-pen' : (isPositive ? 'fa-plus' : 'fa-minus');
+
+            transHtml += `
+                <div class="entry-card">
+                    <div class="entry-icon ${colorClass}"><i class="fa-solid ${icon}"></i></div>
+                    <div class="entry-details">
+                        <h4>${t.note}</h4>
+                        <p>${new Date(t.date).toLocaleString([], {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'})}</p>
+                    </div>
+                    <div class="entry-amount">
+                        <div class="val" style="color: ${isPositive ? 'var(--success)' : (t.type === 'manual_set' ? 'var(--accent)' : 'inherit')}">${sign} ${formatCurrency(t.amount)}</div>
+                    </div>
+                </div>
+            `;
+        });
+        document.getElementById('list-transactions').innerHTML = transHtml || '<p style="text-align:center; color:#64748b;">No transactions yet.</p>';
+    }
+
+</script>
+</body>
+</html>
