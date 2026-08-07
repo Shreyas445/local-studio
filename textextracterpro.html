@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to Text Extractor</title>
+    <!-- Import Tesseract.js -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <style>
+        :root {
+            --bg: #121212;
+            --surface: #1e1e1e;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border: #374151;
+            --success: #10b981;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h2 { margin: 0; text-align: center; }
+        
+        p.subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin: -15px 0 10px 0;
+            font-size: 0.9em;
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.02);
+            position: relative;
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .drop-zone p { pointer-events: none; margin: 0; color: var(--text-muted); }
+        .drop-zone strong { color: var(--primary); }
+
+        /* Image Preview */
+        #previewContainer { display: none; text-align: center; }
+        #imagePreview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        /* Progress Bar */
+        #progressContainer { display: none; }
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        #progressFill {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            transition: width 0.2s ease;
+        }
+        #statusText {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            margin: 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Result Area */
+        #resultContainer { display: none; display: flex; flex-direction: column; gap: 10px; }
+        textarea {
+            width: 100%;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            padding: 12px;
+            font-family: inherit;
+            font-size: 1em;
+            resize: vertical;
+            box-sizing: border-box;
+            line-height: 1.5;
+        }
+        textarea:focus { outline: 2px solid var(--primary); border-color: transparent; }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        button:hover { background: var(--primary-hover); }
+        button.success { background: var(--success); }
+
+        /* Hidden class for toggling */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Image to Text OCR</h2>
+        <p class="subtitle">100% Local & Private Processing</p>
+
+        <div class="drop-zone" id="dropZone">
+            <p><strong>Click to browse</strong>, Drag & Drop, or Paste (Ctrl+V)</p>
+            <input type="file" id="fileInput" accept="image/*" class="hidden">
+        </div>
+
+        <div id="previewContainer" class="hidden">
+            <img id="imagePreview" alt="Image Preview">
+        </div>
+
+        <div id="progressContainer" class="hidden">
+            <div id="statusText">
+                <span id="statusLabel">Initializing Engine...</span>
+                <span id="statusPercent">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div id="progressFill"></div>
+            </div>
+        </div>
+
+        <div id="resultContainer" class="hidden">
+            <textarea id="resultText" placeholder="Extracted text will appear here..."></textarea>
+            <button id="copyBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copy Text
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        
+        const previewContainer = document.getElementById('previewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        
+        const progressContainer = document.getElementById('progressContainer');
+        const statusLabel = document.getElementById('statusLabel');
+        const statusPercent = document.getElementById('statusPercent');
+        const progressFill = document.getElementById('progressFill');
+        
+        const resultContainer = document.getElementById('resultContainer');
+        const resultText = document.getElementById('resultText');
+        const copyBtn = document.getElementById('copyBtn');
+
+        // --- File Selection Logic ---
+        
+        // 1. Click to browse
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleImage(e.target.files[0]);
+        });
+
+        // 2. Drag & Drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                const file = e.dataTransfer.files[0];
+                if (file.type.startsWith('image/')) handleImage(file);
+                else alert("Please drop an image file.");
+            }
+        });
+
+        // 3. Ctrl+V (Paste) functionality
+        window.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    const blob = item.getAsFile();
+                    handleImage(blob);
+                    return; // Break after finding the first image
+                }
+            }
+        });
+
+        // --- Processing Logic ---
+
+        function handleImage(file) {
+            // Reset UI
+            resultContainer.classList.add('hidden');
+            resultText.value = "";
+            progressFill.style.width = '0%';
+            statusPercent.textContent = '0%';
+            
+            // Show preview
+            const objectUrl = URL.createObjectURL(file);
+            imagePreview.src = objectUrl;
+            previewContainer.classList.remove('hidden');
+            
+            // Start OCR
+            performOCR(file);
+        }
+
+        async function performOCR(imageFile) {
+            progressContainer.classList.remove('hidden');
+            statusLabel.textContent = "Loading Tesseract Engine...";
+
+            try {
+                // Tesseract.recognize is the core function
+                const result = await Tesseract.recognize(
+                    imageFile,
+                    'eng', // English language
+                    {
+                        logger: m => {
+                            // Update the progress bar dynamically
+                            if (m.status === 'recognizing text') {
+                                statusLabel.textContent = "Scanning image for text...";
+                                const percent = Math.round(m.progress * 100);
+                                progressFill.style.width = `${percent}%`;
+                                statusPercent.textContent = `${percent}%`;
+                            } else {
+                                statusLabel.textContent = m.status.charAt(0).toUpperCase() + m.status.slice(1);
+                            }
+                        }
+                    }
+                );
+
+                // Processing complete
+                progressContainer.classList.add('hidden');
+                
+                // Show result
+                resultText.value = result.data.text.trim() || "No text found in image.";
+                resultContainer.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("OCR Error:", error);
+                statusLabel.textContent = "Error processing image.";
+                statusLabel.style.color = "#ef4444"; // Red error color
+            }
+        }
+
+        // --- Copy to Clipboard Logic ---
+        
+        copyBtn.addEventListener('click', async () => {
+            if (!resultText.value) return;
+            
+            try {
+                await navigator.clipboard.writeText(resultText.value);
+                
+                // Visual feedback
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Copied!
+                `;
+                copyBtn.classList.add('success');
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.classList.remove('success');
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy!', err);
+                alert('Failed to copy text. Please select and copy manually.');
+            }
+        });
+    </script>
+</body>
+</html>
